@@ -69,6 +69,13 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if args.final and args.limit is not None:
+        parser.error("--final cannot be combined with --limit")
+    if args.final and args.allow_development_cases:
+        parser.error("--final cannot use --allow-development-cases")
+    if args.final and args.allow_oracle_annotations:
+        parser.error("--final cannot use --allow-oracle-annotations")
+
     cases_path = Path(args.cases).resolve()
     if cases_path == DEVELOPMENT_CASES and not args.allow_development_cases:
         parser.error(
