@@ -53,10 +53,18 @@ def main() -> int:
     check("annotation", annotated.evidence_level, "verified")
 
     correction = FakeSubtext(neutral_question).infer(
-        [{"role": "user", "content": "Haklısın, yanlış okudum."}],
+        [{"role": "user", "content": "Hayır, onu demedim. Sürümü soruyorum."}],
         affect(),
     )
-    check("correction", correction.evidence_level, "structural")
+    check("correction label", correction.label, "correction")
+    check("correction evidence", correction.evidence_level, "structural")
+
+    self_correction = FakeSubtext(neutral_question).infer(
+        [{"role": "user", "content": "Haklısın, ben yanlış tarihi okumuşum."}],
+        affect(),
+    )
+    if self_correction.label == "correction":
+        raise AssertionError("User self-correction must not be treated as correcting the assistant.")
 
     question = FakeSubtext(neutral_question).infer(
         [{"role": "user", "content": "Which file is current?"}],
@@ -87,7 +95,7 @@ def main() -> int:
     check("stance unknown", unknown.evidence_level, "unknown")
     check("stance verified", verified.evidence_level, "verified")
 
-    print("evidence tiers: 7/7")
+    print("evidence tiers: 9/9")
     return 0
 
 
