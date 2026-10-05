@@ -440,11 +440,11 @@ steering literature.
 | User model | Yes | TOOT, MATCH, relational agents | Partial |
 | Affect detection | Yes | affective computing, AutoTutor | Yes |
 | Affect changes policy | Yes | Holzapfel, AutoTutor, Bui | Yes |
-| Correction/repair | Yes | TRAINS/grounding, TOOT | Structural/partial |
+| Correction/repair | Yes | TRAINS/grounding, TOOT | Structural repair lifecycle implemented |
 | Task vs discourse separation | Yes | RavenClaw | Partial |
 | Social/relationship behavior | Yes | REA, relational agents | Partial |
 | User-tailored content/style | Yes | MATCH/SPUR | Partial |
-| Satisfaction/quality adaptation | Yes | PARADISE, Ultes et al. | Missing as state |
+| Satisfaction/quality adaptation | Yes | PARADISE, Ultes et al. | Structural interaction-quality state implemented |
 | Learned policy optimization | Yes | NJFun, POMDP work | Not current core |
 | External affect middleware | Yes | NEMO line | Yes-ish |
 | Frozen general-purpose LLM steering | No pre-LLM analogue by definition | — | Yes |
@@ -489,11 +489,10 @@ This carries forward the factorization lessons from RavenClaw and affective
 POMDP work and explicitly prevents "emotion policy" from replacing the user's
 task. Core CI enforces this orthogonality.
 
-### B. Add Interaction Quality as a separate variable
+### B. Interaction Quality as a separate variable — IMPLEMENTED
 
-Do not infer conversation failure solely from emotion.
-
-Suggested state:
+Conversation failure is no longer inferred from emotion alone. EQ-Layer now
+tracks a separate structural state:
 
 ```text
 interaction_quality:
@@ -502,26 +501,55 @@ interaction_quality:
   repeated_failure_count
   unresolved_repair_count
   clarification_count
+  evidence_level
 ```
 
-This directly targets a weakness highlighted by quality-adaptive dialogue work.
+The initial implementation is intentionally conservative. It uses observable
+repair pressure and clarification overhead rather than pretending to have a
+learned satisfaction model. A low interaction-quality score can shorten and
+make realization more direct, but it is explicitly not interpreted as user
+emotion.
 
-### C. Add a real repair state
+Implemented in:
+- `eq_layer/interaction.py`
+- `eval/interaction_state_eval.py`
 
-Suggested fields:
+This carries forward the distinction emphasized by quality-adaptive dialogue
+work: "the user is emotionally activated" and "the interaction is failing" are
+different variables.
+
+### C. Structural repair lifecycle — IMPLEMENTED
+
+Correction is now relational rather than only a flat subtext label:
 
 ```text
 repair:
   active
-  target_turn
-  target_claim
-  correction_type
-  confidence
+  kind
+  target_turn_index
+  target_excerpt
+  correction_excerpt
   repeated
+  recent_repair_count
+  confidence
+  evidence_level
 ```
 
-The historical repair literature makes clear that correction is relational:
-something earlier was misunderstood. It should not be a standalone text label.
+A correction becomes active only when an observable user correction follows a
+prior assistant turn. Once the assistant responds, the repair is labelled
+`responded_repair` rather than "resolved": the system does not claim that its
+reply actually fixed the misunderstanding without later evidence. Repeated
+repairs compile to `stop_restatement_and_repair`.
+
+Crucially, repair state does **not** imply `user_right` or `user_wrong`;
+factual stance remains externally verified or unknown.
+
+Implemented in:
+- `eq_layer/interaction.py`
+- `eq_layer/tracker.py`
+- `eq_layer/actions.py`
+- `eval/interaction_state_eval.py`
+- `eval/factored_action_eval.py`
 
 ### D. Move from confidence threshold to belief state
 
