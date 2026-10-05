@@ -1,0 +1,31 @@
+{
+  "benchmark": "Coarse-Discourse-direct-disagreement",
+  "github_actions_run_id": 37361762343,
+  "archive_sha256": "33cc25e906e677881c0031c1e134460b1e389fac707f2e52fe59b484dc6d0b61",
+  "split": "conversation-grouped 70/15/15",
+  "train_examples": 70701,
+  "dev_examples": 15033,
+  "test_examples": 15485,
+  "train_positive": 2391,
+  "dev_positive": 488,
+  "test_positive": 515,
+  "dev_best_f1_threshold": 0.53,
+  "test": {
+    "average_precision": 0.1420,
+    "roc_auc": 0.8111,
+    "f1": 0.2278,
+    "precision": 0.2015,
+    "recall": 0.2621,
+    "balanced_accuracy": 0.6132,
+    "positive_rate": 0.0333
+  },
+  "high_precision_attempt": {
+    "target_precision": 0.60,
+    "selected_threshold": 0.9999996452123939,
+    "dev_precision": 0.0,
+    "dev_recall": 0.0,
+    "test_precision": 0.0,
+    "test_recall": 0.0
+  },
+  "decision": "NO-GO for direct EQ-Layer challenge routing. Ranking signal exists (ROC-AUC about 0.81), but precision/recall are insufficient under severe class imbalance and no dev threshold achieves the requested high-precision operating point with nonzero predictions. Keep this as an experimental research signal only."
+}
