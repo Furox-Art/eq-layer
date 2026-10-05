@@ -7,6 +7,10 @@ on:
     paths:
       - "eval/hf_model_server.py"
       - "eq_layer/response_experiment.py"
+      - "eq_layer/tracker.py"
+      - "eq_layer/steer.py"
+      - "eq_layer/interaction.py"
+      - "eq_layer/actions.py"
       - "eval/ab_generate.py"
       - "tools/build_ab_heldout.py"
       - ".github/workflows/openweight-pilot.yml"
