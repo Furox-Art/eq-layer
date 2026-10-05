@@ -45,11 +45,19 @@ SOFTENERS = (
 )
 
 CORRECTION_MARKERS = (
-    "haklısın",
-    "haklı olduğunu",
-    "yanlış okudum",
-    "yanlış okumuşum",
-    "hata yaptım",
+    "hayır, onu demedim",
+    "hayır onu demedim",
+    "öyle değil",
+    "yanlış anladın",
+    "yanlış anladınız",
+    "onu sormadım",
+    "ben onu demedim",
+    "demek istediğim",
+    "kastettiğim",
+    "that's not what i meant",
+    "you misunderstood",
+    "no, i meant",
+    "i didn't say that",
 )
 
 DISCLOSURE_MARKERS = (
