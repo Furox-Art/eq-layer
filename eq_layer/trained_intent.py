@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .intent import HeuristicIntent, IntentState
+from .intent_belief import IntentBelief, decide_intent_action
 
 
 def build_pipeline():
@@ -140,17 +141,23 @@ class TrainedIntent:
 
         probabilities = self.model.predict_proba([current])[0]
         classes = self.model.classes_
-        ranking = probabilities.argsort()[::-1]
-        best_index = int(ranking[0])
-        second_index = int(ranking[1])
-        predicted = str(classes[best_index])
-        confidence = float(probabilities[best_index])
-        margin = confidence - float(probabilities[second_index])
+        posterior = {
+            str(label): float(probability)
+            for label, probability in zip(classes, probabilities, strict=True)
+        }
+        belief = IntentBelief.from_mapping(posterior)
+        decision = decide_intent_action(belief)
 
-        decisive = confidence >= self.confidence_threshold and margin >= self.margin_threshold
-        kind = predicted if decisive else "unknown"
+        predicted = belief.top_kind
+        confidence = belief.top_probability
+        margin = belief.margin
+
+        # Bayes-risk routing replaces the old confidence+margin gate. The
+        # legacy thresholds remain serialized for backwards compatibility and
+        # diagnostics, but they do not decide the production route.
+        kind = decision.selected_intent or "unknown"
         explicit = kind in {"action_request", "status_check", "explanation", "question"}
-        needs_clarification = kind == "unknown"
+        needs_clarification = decision.action == "clarify"
         response_mode = {
             "action_request": "execute",
             "status_check": "direct",
@@ -172,8 +179,12 @@ class TrainedIntent:
                 f"trained_prediction:{predicted}",
                 f"probability:{confidence:.4f}",
                 f"margin:{margin:.4f}",
+                f"belief_entropy:{belief.normalized_entropy:.4f}",
+                f"routing:{decision.rationale}",
                 f"training_examples:{self.training_examples}",
             ),
+            belief=belief,
+            risk_decision=decision,
         )
 
     def save(self, path: str | Path) -> None:
