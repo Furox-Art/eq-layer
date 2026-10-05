@@ -28,3 +28,5 @@ jobs:
         run: python eval/xdailydialog_subtext_eval.py
       - name: Run DialogBank label inventory
         run: python eval/dialogbank_inventory.py
+      - name: Run Coarse Discourse disagreement inventory
+        run: python eval/coarse_discourse_inventory.py
