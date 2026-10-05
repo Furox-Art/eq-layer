@@ -238,7 +238,10 @@ def experiment_manifest(
     return {
         "design": "same-base-model paired baseline-vs-eq-layer",
         "model_id": model.model_id,
-        "model_command": list(model.command),
+        "model_command_executable": model.command[0],
+        "model_command_argv_sha256": hashlib.sha256(
+            "\0".join(model.command).encode("utf-8")
+        ).hexdigest(),
         "temperature": model.temperature,
         "global_seed": global_seed,
         "n_cases": n_cases,
