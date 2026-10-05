@@ -43,6 +43,20 @@ def metrics(expected: list[str], predicted: list[str]) -> dict:
     }
 
 
+
+def validate_belief_outputs(adapter, records: list[dict]) -> None:
+    for row in records[:12]:
+        state = adapter.infer([{"role": "user", "content": row["text"]}])
+        if state.belief is None:
+            raise AssertionError("Trained intent did not expose a belief state.")
+        if state.risk_decision is None:
+            raise AssertionError("Trained intent did not expose a Bayes-risk decision.")
+        total = sum(state.belief.as_dict().values())
+        if abs(total - 1.0) > 1e-9:
+            raise AssertionError(f"Intent belief is not normalized: {total}")
+        if state.needs_clarification != (state.risk_decision.action == "clarify"):
+            raise AssertionError("Clarification flag disagrees with Bayes-risk action.")
+
 def main() -> int:
     holdout = load_jsonl_records(HOLDOUT)
     expected = [row["label"] for row in holdout]
@@ -52,6 +66,7 @@ def main() -> int:
 
     heuristic_scores = metrics(expected, predict(heuristic, holdout))
     trained_scores = metrics(expected, predict(trained, holdout))
+    validate_belief_outputs(trained, holdout)
 
     train = bundled_training_records()
     texts = [row["text"] for row in train]
@@ -75,6 +90,7 @@ def main() -> int:
         "cv5_accuracy_min": round(float(cv_scores.min()), 4),
         "confidence_threshold": trained.confidence_threshold,
         "margin_threshold": trained.margin_threshold,
+        "routing": "belief-state-bayes-risk",
     }
     print(json.dumps(report, indent=2))
 
