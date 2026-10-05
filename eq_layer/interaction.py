@@ -117,19 +117,40 @@ def infer_repair_state(messages: list[dict]) -> RepairState:
         ),
         None,
     )
+    recent_events = [
+        event
+        for event in events
+        if event[0] >= max(0, last_user_index - 6)
+    ]
+
     if current_event is None:
         return RepairState(
             active=False,
-            recent_repair_count=len(events[-3:]),
+            recent_repair_count=len(recent_events),
             evidence=("no_current_user_correction",),
         )
 
     user_index, assistant_index = current_event
-    recent_events = [
-        event
-        for event in events
-        if event[0] >= max(0, user_index - 6)
-    ]
+
+    # A correction is unresolved only until the assistant has responded after
+    # that correction. Historical corrections remain evidence of interaction
+    # quality but are not kept artificially "active".
+    if any(
+        message.get("role") == "assistant"
+        for message in messages[user_index + 1:]
+    ):
+        return RepairState(
+            active=False,
+            kind="resolved_or_responded_repair",
+            target_turn_index=assistant_index,
+            correction_excerpt=str(messages[user_index].get("content", "")).strip()[:240],
+            repeated=len(recent_events) >= 2,
+            recent_repair_count=len(recent_events),
+            confidence=1.0,
+            evidence_level="structural",
+            evidence=("assistant_response_after_correction",),
+        )
+
     repeated = len(recent_events) >= 2
 
     assistant_text = str(messages[assistant_index].get("content", "")).strip()
