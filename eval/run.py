@@ -12,7 +12,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from eq_layer.affect import HeuristicAffect, load_cases  # noqa: E402
-from eq_layer.intent import HeuristicIntent  # noqa: E402
+from eq_layer.trained_intent import TrainedIntent  # noqa: E402
 from eq_layer.policies import POLICIES, Selector  # noqa: E402
 from eq_layer.steer import score_case  # noqa: E402
 
@@ -22,7 +22,7 @@ CASES = os.path.join(os.path.dirname(__file__), "cases.jsonl")
 def main() -> int:
     cases = load_cases(CASES)
     adapter = HeuristicAffect()
-    intent_adapter = HeuristicIntent()
+    intent_adapter = TrainedIntent.from_bundled()
     selector = Selector()
 
     scores = []
