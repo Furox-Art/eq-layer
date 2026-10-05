@@ -14,7 +14,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install
+        run: python -m pip install -e ".[ml]"
       - name: Compile
         run: python -m compileall -q eq_layer eval
-      - name: Run seeded evaluation
+      - name: Run seeded policy evaluation
         run: python eval/run.py
+      - name: Run trained intent evaluation
+        run: python eval/intent_eval.py
