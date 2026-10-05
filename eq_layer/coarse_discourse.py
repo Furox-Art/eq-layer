@@ -16,10 +16,18 @@ COARSE_DISCOURSE_URL = (
 
 @dataclass(frozen=True)
 class CoarseDiscourseExample:
+    utterance_id: str
     text: str
     label: str
     conversation_id: str
     reply_to: str | None
+    context_text: str = ""
+
+    @property
+    def model_text(self) -> str:
+        if self.context_text:
+            return f"{self.context_text}\n[REPLY]\n{self.text}"
+        return self.text
 
 
 def download_archive() -> bytes:
@@ -48,26 +56,45 @@ def load_examples(data: bytes) -> tuple[list[CoarseDiscourseExample], list[str]]
         utterances_member = _find_member(names, "utterances.jsonl")
         examples: list[CoarseDiscourseExample] = []
 
+        rows = []
         with archive.open(utterances_member) as fh:
             for raw in fh:
-                row = json.loads(raw.decode("utf-8"))
-                text = str(row.get("text") or "").strip()
-                meta = row.get("meta") or {}
-                label = str(meta.get("majority_type") or "").strip().lower()
-                if not text or not label:
-                    continue
-                examples.append(
-                    CoarseDiscourseExample(
-                        text=text,
-                        label=label,
-                        conversation_id=str(row.get("conversation_id") or ""),
-                        reply_to=(
-                            str(row.get("reply_to"))
-                            if row.get("reply_to") is not None
-                            else None
-                        ),
-                    )
+                rows.append(json.loads(raw.decode("utf-8")))
+
+        text_by_id = {
+            str(row.get("id") or ""): str(row.get("text") or "").strip()
+            for row in rows
+            if row.get("id") is not None
+        }
+
+        for row in rows:
+            text = str(row.get("text") or "").strip()
+            meta = row.get("meta") or {}
+            label = str(meta.get("majority_type") or "").strip().lower()
+            if not text or not label:
+                continue
+
+            utterance_id = str(row.get("id") or "")
+            conversation_id = str(
+                row.get("conversation_id")
+                or row.get("root")
+                or utterance_id
+            )
+            reply_raw = row.get("reply_to")
+            if reply_raw is None:
+                reply_raw = row.get("reply-to")
+            reply_to = str(reply_raw) if reply_raw is not None else None
+
+            examples.append(
+                CoarseDiscourseExample(
+                    utterance_id=utterance_id,
+                    text=text,
+                    label=label,
+                    conversation_id=conversation_id,
+                    reply_to=reply_to,
+                    context_text=text_by_id.get(reply_to or "", ""),
                 )
+            )
         return examples, names
 
 
