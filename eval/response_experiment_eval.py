@@ -95,6 +95,11 @@ def main() -> int:
             raise AssertionError("Baseline unexpectedly received the EQ system message.")
         if pair["id"] == "heldout-001" and "messages=3" not in pair["eq"]:
             raise AssertionError("EQ condition lost original transcript context.")
+        audit = generation.get("response_audit")
+        if not isinstance(audit, dict):
+            raise AssertionError("Passive response audit metadata is missing.")
+        if "passed" not in audit or "issues" not in audit:
+            raise AssertionError(f"Malformed response audit metadata: {audit}")
 
     if (
         pairs[0]["generation"]["pair_seed"]
@@ -161,6 +166,8 @@ def main() -> int:
             raise AssertionError("Model command fingerprint missing.")
         if manifest["annotations_used"]:
             raise AssertionError("Manifest says annotations were used.")
+        if manifest.get("response_auditor_mode") != "passive-metadata-only":
+            raise AssertionError("Manifest did not preserve passive auditor mode.")
 
     print("response experiment engine: pass")
     return 0
