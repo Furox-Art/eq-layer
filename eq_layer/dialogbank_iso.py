@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html.parser
+import re
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -68,8 +69,30 @@ def _strip_ref(value: str | None) -> str:
     return (value or "").lstrip("#")
 
 
+def _repair_xml_text(xml_text: str) -> str:
+    # Some legacy DialogBank files contain bare ampersands or control
+    # characters in transcribed speech. Repair only characters that XML 1.0
+    # cannot represent; do not alter annotation structure or labels.
+    xml_text = re.sub(
+        r"&(?!#\d+;|#x[0-9A-Fa-f]+;|[A-Za-z_][A-Za-z0-9_.:-]*;)",
+        "&amp;",
+        xml_text,
+    )
+    return "".join(
+        ch
+        for ch in xml_text
+        if ch in "\t\n\r" or ord(ch) >= 0x20
+    )
+
+
 def parse_diaml(xml_text: str, source_url: str) -> list[ISOExample]:
-    root = ET.fromstring(xml_text)
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        try:
+            root = ET.fromstring(_repair_xml_text(xml_text))
+        except ET.ParseError as exc:
+            raise ValueError(f"Could not parse DialogBank DiAML: {source_url}") from exc
 
     words: dict[str, str] = {}
     for elem in root.iter():
