@@ -237,9 +237,10 @@ what a looser one does to a state you did not think about.
 
 Two consequences worth arguing about:
 
-- **Ties are broken by declaration order**, which is arbitrary and a real
-  weakness. If two policies of equal specificity both apply, that is a
-  taxonomy problem, not a tie to be won.
+- **Implicit tie-breaking is forbidden.** Selection ranks by specificity, then
+  explicit `priority`. If two applicable policies still tie, the selector
+  raises an ambiguity error instead of silently picking whichever was declared
+  first.
 - **`stance` is not guessed.** Whether the user is right is a semantic
   judgement, so the tracker returns `unknown` unless a case or caller supplies
   one. Policies that need it declare `user_is_right` or `stance_unknown`, so
