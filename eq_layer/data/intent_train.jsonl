@@ -1,0 +1,299 @@
+{"text":"Bunu depoya ekle","label":"action_request"}
+{"text":"Dosyayı güncelle","label":"action_request"}
+{"text":"Şu hatayı düzelt","label":"action_request"}
+{"text":"Kodun testlerini çalıştır","label":"action_request"}
+{"text":"Bu metni kısalt","label":"action_request"}
+{"text":"GitHub'a gönder","label":"action_request"}
+{"text":"Devam et ve sonucu yaz","label":"action_request"}
+{"text":"Bu bölümü sil","label":"action_request"}
+{"text":"Raporu oluştur","label":"action_request"}
+{"text":"Kaynakları araştır","label":"action_request"}
+{"text":"Belgeyi incele","label":"action_request"}
+{"text":"Şunu kontrol et","label":"action_request"}
+{"text":"Make this change","label":"action_request"}
+{"text":"Update the file","label":"action_request"}
+{"text":"Run the tests","label":"action_request"}
+{"text":"Add this to the repository","label":"action_request"}
+{"text":"Fix the bug","label":"action_request"}
+{"text":"Create the report","label":"action_request"}
+{"text":"Delete this section","label":"action_request"}
+{"text":"Check the document","label":"action_request"}
+{"text":"Benchmarkı koştur","label":"action_request"}
+{"text":"Testleri koştur","label":"action_request"}
+{"text":"Fonksiyonu yeniden yaz","label":"action_request"}
+{"text":"README'yi değiştir","label":"action_request"}
+{"text":"Bu kısmı yeniden düzenle","label":"action_request"}
+{"text":"Run the benchmark","label":"action_request"}
+{"text":"Rewrite this function","label":"action_request"}
+{"text":"Please run the checks","label":"action_request"}
+{"text":"Edit the README","label":"action_request"}
+{"text":"Depodaki lisans dosyasını yenile","label":"action_request"}
+{"text":"Lisans dosyasını güncelle","label":"action_request"}
+{"text":"Son çıktıyı tabloya ekle","label":"action_request"}
+{"text":"Tabloya yeni satırı ekle","label":"action_request"}
+{"text":"Benchmark koşusunu başlat","label":"action_request"}
+{"text":"Koşuyu başlat","label":"action_request"}
+{"text":"Bu değişiklikleri commit et","label":"action_request"}
+{"text":"Değişiklikleri kaydet","label":"action_request"}
+{"text":"Tekrarlanan bölümü kaldır","label":"action_request"}
+{"text":"Dosyayı yeniden adlandır","label":"action_request"}
+{"text":"Bu paragrafı İngilizceye çevir","label":"action_request"}
+{"text":"Grafiği üret","label":"action_request"}
+{"text":"Sonucu karşılaştır","label":"action_request"}
+{"text":"Bana kısa bir özet hazırla","label":"action_request"}
+{"text":"Bunu şimdi yapabilir misin","label":"action_request"}
+{"text":"Şunu düzeltir misin","label":"action_request"}
+{"text":"Bunu kontrol eder misin","label":"action_request"}
+{"text":"Dosyayı açıp bak","label":"action_request"}
+{"text":"Ana dala gönder","label":"action_request"}
+{"text":"Please remove the duplicate section","label":"action_request"}
+{"text":"Commit these changes","label":"action_request"}
+{"text":"Start the benchmark run","label":"action_request"}
+{"text":"Add the latest output to the table","label":"action_request"}
+{"text":"Rename the file","label":"action_request"}
+{"text":"Translate this paragraph to English","label":"action_request"}
+{"text":"Generate the chart","label":"action_request"}
+{"text":"Compare the results","label":"action_request"}
+{"text":"Prepare a short summary","label":"action_request"}
+{"text":"Could you fix this","label":"action_request"}
+{"text":"Please check this","label":"action_request"}
+{"text":"Open the file and inspect it","label":"action_request"}
+{"text":"Push this to main","label":"action_request"}
+{"text":"Başarısız testi yeniden çalıştır","label":"action_request"}
+{"text":"Başarısız job'u tekrar çalıştır","label":"action_request"}
+{"text":"Please rerun the failed test","label":"action_request"}
+{"text":"Rerun the job","label":"action_request"}
+{"text":"Durum ne","label":"status_check"}
+{"text":"Son durum nedir","label":"status_check"}
+{"text":"Ne kadar kaldı","label":"status_check"}
+{"text":"Bitti mi","label":"status_check"}
+{"text":"Şu an çalışıyor mu","label":"status_check"}
+{"text":"İşlem ilerliyor mu","label":"status_check"}
+{"text":"Koşu tamamlandı mı","label":"status_check"}
+{"text":"Workflow ne durumda","label":"status_check"}
+{"text":"İndirme bitti mi","label":"status_check"}
+{"text":"Şimdi ne oldu","label":"status_check"}
+{"text":"Hesaplama devam ediyor mu","label":"status_check"}
+{"text":"Kaç dosya kaldı","label":"status_check"}
+{"text":"What's the status","label":"status_check"}
+{"text":"Is it finished","label":"status_check"}
+{"text":"How much is left","label":"status_check"}
+{"text":"Is the workflow still running","label":"status_check"}
+{"text":"Did the download finish","label":"status_check"}
+{"text":"Where are we now","label":"status_check"}
+{"text":"CI bitti mi","label":"status_check"}
+{"text":"Kaç görev kaldı","label":"status_check"}
+{"text":"Kaç iş kaldı","label":"status_check"}
+{"text":"Ne aşamada","label":"status_check"}
+{"text":"Workflow tamamlandı mı","label":"status_check"}
+{"text":"Koşu bitti mi","label":"status_check"}
+{"text":"Is the CI finished","label":"status_check"}
+{"text":"How many tasks are left","label":"status_check"}
+{"text":"How many jobs remain","label":"status_check"}
+{"text":"What stage are we at","label":"status_check"}
+{"text":"Is the run done","label":"status_check"}
+{"text":"Runner hâlâ aktif mi","label":"status_check"}
+{"text":"Şimdi kaç tane kaldı","label":"status_check"}
+{"text":"İşlem tamamlandı mı yoksa sürüyor mu","label":"status_check"}
+{"text":"Koşu hâlâ devam ediyor mu","label":"status_check"}
+{"text":"Runner kapandı mı","label":"status_check"}
+{"text":"Şu an hangi aşamada","label":"status_check"}
+{"text":"Geriye ne kaldı","label":"status_check"}
+{"text":"İş bitti mi yoksa devam mı ediyor","label":"status_check"}
+{"text":"Ne kadarı tamamlandı","label":"status_check"}
+{"text":"Yüzde kaç bitti","label":"status_check"}
+{"text":"Workflow sonuçlandı mı","label":"status_check"}
+{"text":"Son job tamamlandı mı","label":"status_check"}
+{"text":"Has the job completed","label":"status_check"}
+{"text":"Is the runner still active","label":"status_check"}
+{"text":"What remains to be done","label":"status_check"}
+{"text":"Is the process still running","label":"status_check"}
+{"text":"How far along is it","label":"status_check"}
+{"text":"What percentage is complete","label":"status_check"}
+{"text":"Has the workflow completed","label":"status_check"}
+{"text":"Is the last job done","label":"status_check"}
+{"text":"Are we finished yet","label":"status_check"}
+{"text":"How many are still pending","label":"status_check"}
+{"text":"Bu neden oluyor","label":"explanation"}
+{"text":"Nasıl çalışıyor","label":"explanation"}
+{"text":"Bunu açıkla","label":"explanation"}
+{"text":"Bunun sebebi ne","label":"explanation"}
+{"text":"Aradaki farkı anlat","label":"explanation"}
+{"text":"Neden bu sonucu verdi","label":"explanation"}
+{"text":"Bu kavram ne demek","label":"explanation"}
+{"text":"Nasıl hesaplanıyor","label":"explanation"}
+{"text":"Bana mantığını anlat","label":"explanation"}
+{"text":"Niçin böyle seçtin","label":"explanation"}
+{"text":"Bu yöntemi açıklar mısın","label":"explanation"}
+{"text":"Neden başarısız oldu","label":"explanation"}
+{"text":"Why does this happen","label":"explanation"}
+{"text":"Explain how this works","label":"explanation"}
+{"text":"What does this mean","label":"explanation"}
+{"text":"Why did it fail","label":"explanation"}
+{"text":"Explain the difference","label":"explanation"}
+{"text":"How is this calculated","label":"explanation"}
+{"text":"Niye böyle davranıyor","label":"explanation"}
+{"text":"Bu neden böyle davranıyor","label":"explanation"}
+{"text":"Bunun mantığı nedir","label":"explanation"}
+{"text":"Bu denklemi anlat","label":"explanation"}
+{"text":"Why is it behaving this way","label":"explanation"}
+{"text":"Why is the model doing this","label":"explanation"}
+{"text":"Explain this equation","label":"explanation"}
+{"text":"Bu seçimin gerekçesi ne","label":"explanation"}
+{"text":"Neye göre bunu seçtin","label":"explanation"}
+{"text":"Bu mekanizmayı bana açıklar mısın","label":"explanation"}
+{"text":"Bu neden gerekli","label":"explanation"}
+{"text":"Bu karar nasıl veriliyor","label":"explanation"}
+{"text":"Bunun arkasındaki mantık ne","label":"explanation"}
+{"text":"Bu hata neden çıkıyor","label":"explanation"}
+{"text":"Bu formül nasıl türetiliyor","label":"explanation"}
+{"text":"Bu sonuç nereden geliyor","label":"explanation"}
+{"text":"Neden bu policy seçildi","label":"explanation"}
+{"text":"Bu iki sonuç neden farklı","label":"explanation"}
+{"text":"Why was this policy selected","label":"explanation"}
+{"text":"Walk me through how this mechanism works","label":"explanation"}
+{"text":"Why is this necessary","label":"explanation"}
+{"text":"How is this decision made","label":"explanation"}
+{"text":"What is the reasoning behind this","label":"explanation"}
+{"text":"Why does this error occur","label":"explanation"}
+{"text":"How is this formula derived","label":"explanation"}
+{"text":"Where does this result come from","label":"explanation"}
+{"text":"Why are these results different","label":"explanation"}
+{"text":"Python 3.12 destekliyor mu","label":"question"}
+{"text":"Bu dosyanın boyutu kaç","label":"question"}
+{"text":"Hangi sürüm daha yeni","label":"question"}
+{"text":"Kaç tane test var","label":"question"}
+{"text":"Modelin bağlam sınırı nedir","label":"question"}
+{"text":"Bu paket ücretsiz mi","label":"question"}
+{"text":"Lisansı MIT mi","label":"question"}
+{"text":"Hangi dosya ana dosya","label":"question"}
+{"text":"Son commit hangi tarihte","label":"question"}
+{"text":"Bu özellik var mı","label":"question"}
+{"text":"İki yöntemden hangisi daha hızlı","label":"question"}
+{"text":"Repo public mi","label":"question"}
+{"text":"Does it support Python 3.12","label":"question"}
+{"text":"How many tests are there","label":"question"}
+{"text":"Which version is newer","label":"question"}
+{"text":"Is this package free","label":"question"}
+{"text":"What is the context limit","label":"question"}
+{"text":"Is the repository public","label":"question"}
+{"text":"Paketin minimum Python sürümü kaç","label":"question"}
+{"text":"Bu dosyada kaç satır var","label":"question"}
+{"text":"Model açık kaynak mı","label":"question"}
+{"text":"Hangi dosya giriş noktası","label":"question"}
+{"text":"GPU gerekiyor mu","label":"question"}
+{"text":"Bu API ücretli mi","label":"question"}
+{"text":"Bu seçenek varsayılan mı","label":"question"}
+{"text":"Hangi lisans kullanılıyor","label":"question"}
+{"text":"Bu dosya JSON mı","label":"question"}
+{"text":"Repo kaç commit içeriyor","label":"question"}
+{"text":"Bu özellik Windows'ta çalışıyor mu","label":"question"}
+{"text":"Sürüm numarası ne","label":"question"}
+{"text":"Which file is the entry point","label":"question"}
+{"text":"Does this require a GPU","label":"question"}
+{"text":"Is the model open source","label":"question"}
+{"text":"What is the minimum Python version","label":"question"}
+{"text":"How many lines are in this file","label":"question"}
+{"text":"Is this API paid","label":"question"}
+{"text":"Is this the default option","label":"question"}
+{"text":"Which license is used","label":"question"}
+{"text":"Is this file JSON","label":"question"}
+{"text":"How many commits are in the repo","label":"question"}
+{"text":"Does this work on Windows","label":"question"}
+{"text":"What is the version number","label":"question"}
+{"text":"Randevumu üç kez değiştirdiler","label":"statement"}
+{"text":"Bugün biraz yorgunum","label":"statement"}
+{"text":"Bu sonuç beklediğimden farklı","label":"statement"}
+{"text":"Dosya artık burada","label":"statement"}
+{"text":"Yeni sürüm daha temiz görünüyor","label":"statement"}
+{"text":"Bu yaklaşım bana mantıklı geliyor","label":"statement"}
+{"text":"Sunumu yarına erteledim","label":"statement"}
+{"text":"Model bu örnekte iyi cevap verdi","label":"statement"}
+{"text":"Kod şu anda main dalında","label":"statement"}
+{"text":"Veri seti küçük","label":"statement"}
+{"text":"Bu fikir ilginç","label":"statement"}
+{"text":"Testlerin çoğu geçti","label":"statement"}
+{"text":"The result is different from what I expected","label":"statement"}
+{"text":"The file is here now","label":"statement"}
+{"text":"The dataset is small","label":"statement"}
+{"text":"This approach looks reasonable","label":"statement"}
+{"text":"The model handled this example well","label":"statement"}
+{"text":"Most tests passed","label":"statement"}
+{"text":"Yeni yapı daha sade","label":"statement"}
+{"text":"Yeni sürüm daha basit","label":"statement"}
+{"text":"Workflow bugün hata verdi","label":"statement"}
+{"text":"CI bugün hata verdi","label":"statement"}
+{"text":"The new structure is simpler","label":"statement"}
+{"text":"The workflow failed yesterday","label":"statement"}
+{"text":"CI failed today","label":"statement"}
+{"text":"The build failed today","label":"statement"}
+{"text":"Bu sonuç önceki koşudan daha iyi","label":"statement"}
+{"text":"Bugün veri indirme yavaşladı","label":"statement"}
+{"text":"Yeni mimari daha okunabilir görünüyor","label":"statement"}
+{"text":"Son test beklediğimden kötü çıktı","label":"statement"}
+{"text":"Repo artık public","label":"statement"}
+{"text":"Bu dosya dün değişti","label":"statement"}
+{"text":"Model Türkçede daha iyi görünüyor","label":"statement"}
+{"text":"Çalışma bugün hata verdi","label":"statement"}
+{"text":"İndirme biraz yavaş","label":"statement"}
+{"text":"Yeni çıktı daha kısa","label":"statement"}
+{"text":"Bu yaklaşım riskli olabilir","label":"statement"}
+{"text":"The latest result looks better","label":"statement"}
+{"text":"The dataset was updated yesterday","label":"statement"}
+{"text":"The new architecture is more readable","label":"statement"}
+{"text":"The last test performed worse than expected","label":"statement"}
+{"text":"The repository is public now","label":"statement"}
+{"text":"The file changed yesterday","label":"statement"}
+{"text":"The model looks better in Turkish","label":"statement"}
+{"text":"The run failed today","label":"statement"}
+{"text":"The download is slow","label":"statement"}
+{"text":"The new output is shorter","label":"statement"}
+{"text":"This approach may be risky","label":"statement"}
+{"text":"Son commit sadece dokümantasyonu değiştirdi","label":"statement"}
+{"text":"Commit sadece belgeleri değiştirdi","label":"statement"}
+{"text":"The latest commit only changes documentation","label":"statement"}
+{"text":"The commit only updates docs","label":"statement"}
+{"text":"Bunu","label":"unknown"}
+{"text":"Şunu","label":"unknown"}
+{"text":"Onu","label":"unknown"}
+{"text":"Bu şey","label":"unknown"}
+{"text":"Şey","label":"unknown"}
+{"text":"Buna mı","label":"unknown"}
+{"text":"Şu mu","label":"unknown"}
+{"text":"Onu da","label":"unknown"}
+{"text":"Bununla","label":"unknown"}
+{"text":"Şundan","label":"unknown"}
+{"text":"Oradaki şey","label":"unknown"}
+{"text":"Hani o","label":"unknown"}
+{"text":"That one","label":"unknown"}
+{"text":"This","label":"unknown"}
+{"text":"It","label":"unknown"}
+{"text":"That thing","label":"unknown"}
+{"text":"The other one","label":"unknown"}
+{"text":"This one","label":"unknown"}
+{"text":"Diğeri","label":"unknown"}
+{"text":"Öteki","label":"unknown"}
+{"text":"O şey","label":"unknown"}
+{"text":"Buna","label":"unknown"}
+{"text":"The other","label":"unknown"}
+{"text":"That other one","label":"unknown"}
+{"text":"Şu","label":"unknown"}
+{"text":"Ondan","label":"unknown"}
+{"text":"Şuradaki","label":"unknown"}
+{"text":"Bununki","label":"unknown"}
+{"text":"Öbürü","label":"unknown"}
+{"text":"Oradaki","label":"unknown"}
+{"text":"O taraftaki","label":"unknown"}
+{"text":"Şu olan","label":"unknown"}
+{"text":"Bununla ilgili olan","label":"unknown"}
+{"text":"Önceki şey","label":"unknown"}
+{"text":"Hani şu","label":"unknown"}
+{"text":"Diğer olan","label":"unknown"}
+{"text":"That one there","label":"unknown"}
+{"text":"The thing over there","label":"unknown"}
+{"text":"The previous one","label":"unknown"}
+{"text":"The other thing","label":"unknown"}
+{"text":"The one over there","label":"unknown"}
+{"text":"This thing","label":"unknown"}
+{"text":"That thing there","label":"unknown"}
+{"text":"The other one there","label":"unknown"}
