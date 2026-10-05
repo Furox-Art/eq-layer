@@ -89,7 +89,7 @@ def _repair_xml_text(xml_text: str) -> str:
 def _parse_attrs(raw: str) -> dict[str, str]:
     attrs: dict[str, str] = {}
     for key, _quote, value in re.findall(
-        r"([A-Za-z_][\\w:.-]*)\\s*=\\s*(['\"])(.*?)\\2",
+        r"([A-Za-z_][\w:.-]*)\s*=\s*(['\"])(.*?)\2",
         raw,
         flags=re.DOTALL,
     ):
@@ -110,7 +110,7 @@ def _parse_diaml_legacy(xml_text: str, source_url: str) -> list[ISOExample]:
     EQ-Layer needs. This fallback never rewrites or fabricates labels.
     """
     words: dict[str, str] = {}
-    for match in re.finditer(r"<(?:[A-Za-z_][\\w.-]*:)?w\\b([^>]*)>(.*?)</(?:[A-Za-z_][\\w.-]*:)?w>", xml_text, flags=re.DOTALL):
+    for match in re.finditer(r"<(?:[A-Za-z_][\w.-]*:)?w\b([^>]*)>(.*?)</(?:[A-Za-z_][\w.-]*:)?w>", xml_text, flags=re.DOTALL):
         attrs = _parse_attrs(match.group(1))
         wid = attrs.get("xml:id")
         if wid:
@@ -118,7 +118,7 @@ def _parse_diaml_legacy(xml_text: str, source_url: str) -> list[ISOExample]:
 
     verbal_segments: dict[str, list[str]] = {}
     for match in re.finditer(
-        r"<(?:[A-Za-z_][\\w.-]*:)?spanGrp\\b([^>]*)>(.*?)</(?:[A-Za-z_][\\w.-]*:)?spanGrp>",
+        r"<(?:[A-Za-z_][\w.-]*:)?spanGrp\b([^>]*)>(.*?)</(?:[A-Za-z_][\w.-]*:)?spanGrp>",
         xml_text,
         flags=re.DOTALL,
     ):
@@ -129,7 +129,7 @@ def _parse_diaml_legacy(xml_text: str, source_url: str) -> list[ISOExample]:
         if not sid:
             continue
         ids: list[str] = []
-        for span in re.finditer(r"<(?:[A-Za-z_][\\w.-]*:)?span\\b([^>]*)/?>", match.group(2)):
+        for span in re.finditer(r"<(?:[A-Za-z_][\w.-]*:)?span\b([^>]*)/?>", match.group(2)):
             span_attrs = _parse_attrs(span.group(1))
             start = _strip_ref(span_attrs.get("from"))
             end = _strip_ref(span_attrs.get("to"))
@@ -140,21 +140,21 @@ def _parse_diaml_legacy(xml_text: str, source_url: str) -> list[ISOExample]:
         verbal_segments[sid] = ids
 
     functional_to_verbal: dict[str, str] = {}
-    for match in re.finditer(r"<(?:[A-Za-z_][\\w.-]*:)?fs\\b([^>]*)>(.*?)</(?:[A-Za-z_][\\w.-]*:)?fs>", xml_text, flags=re.DOTALL):
+    for match in re.finditer(r"<(?:[A-Za-z_][\w.-]*:)?fs\b([^>]*)>(.*?)</(?:[A-Za-z_][\w.-]*:)?fs>", xml_text, flags=re.DOTALL):
         attrs = _parse_attrs(match.group(1))
         if attrs.get("type") != "functionalSegment":
             continue
         fsid = attrs.get("xml:id")
         if not fsid:
             continue
-        for fmatch in re.finditer(r"<(?:[A-Za-z_][\\w.-]*:)?f\\b([^>]*)/?>", match.group(2)):
+        for fmatch in re.finditer(r"<(?:[A-Za-z_][\w.-]*:)?f\b([^>]*)/?>", match.group(2)):
             fattrs = _parse_attrs(fmatch.group(1))
             if fattrs.get("name") == "verbalComponent":
                 functional_to_verbal[fsid] = _strip_ref(fattrs.get("fVal"))
                 break
 
     examples: list[ISOExample] = []
-    for match in re.finditer(r"<(?:[A-Za-z_][\\w.-]*:)?dialogueAct\\b([^>]*)/?>", xml_text):
+    for match in re.finditer(r"<(?:[A-Za-z_][\w.-]*:)?dialogueAct\b([^>]*)/?>", xml_text):
         attrs = _parse_attrs(match.group(1))
         function = attrs.get("communicativeFunction")
         target = _strip_ref(attrs.get("target"))
@@ -176,7 +176,7 @@ def _parse_diaml_legacy(xml_text: str, source_url: str) -> list[ISOExample]:
 
     if not examples:
         tags = Counter(
-            re.findall(r"<\\s*/?\\s*([A-Za-z_][\\w:.-]*)", xml_text)
+            re.findall(r"<\s*/?\s*([A-Za-z_][\w:.-]*)", xml_text)
         ).most_common(24)
         raise ValueError(
             f"Legacy DialogBank parser recovered no dialogue acts: {source_url}; "
