@@ -72,7 +72,6 @@ class CommandModel:
     ) -> str:
         payload = {
             "model_id": self.model_id,
-            "condition": condition,
             "seed": seed,
             "temperature": self.temperature,
             "messages": messages,
