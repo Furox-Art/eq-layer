@@ -148,6 +148,40 @@ therefore treats emotion as supporting evidence rather than standalone proof of
 subtext. The machine-readable result is
 `eval/results/xdailydialog_signal_baseline.json`.
 
+### Higher-level subtext audits
+
+Direct higher-level supervision was investigated rather than assumed:
+
+| source / target | verified result | routing decision |
+| --- | --- | --- |
+| DialogBank correction | 4 direct examples | **NO-GO** — insufficient supervision |
+| DialogBank disagreement | 1 direct example | **NO-GO** — insufficient supervision |
+| Coarse Discourse disagreement | test ROC-AUC 0.8111, AP 0.1420, F1 0.2278 | **NO-GO** — ranking signal exists, but precision/recall are insufficient for `challenge` routing |
+| DBDC3 hard breakdown | test ROC-AUC 0.5057, AP 0.2555 | **NO-GO** — effectively chance-level text-only generalisation |
+
+These results are preserved rather than optimized away. The corresponding
+machine-readable records are
+`eval/results/dialogbank_label_inventory.json`,
+`eval/results/coarse_disagreement_no_go.json`, and
+`eval/results/dbdc3_breakdown_no_go.json`.
+
+
+## Evidence provenance
+
+A subtext label is not enough by itself. `SubtextDecision.evidence_level`
+records how the label was obtained:
+
+- `verified` — caller/external annotation supplied the state.
+- `direct_learned` — the upstream training target directly matches the emitted label.
+- `derived` — multiple learned signals are composed into a higher-level control label.
+- `structural` — explicit conversational form or marker triggered the label.
+- `fallback` — learned evidence was too weak and an auditable fallback was used.
+
+For example, XDailyDialog directly supervises `question`, but it does not
+directly supervise EQ-Layer's `challenge` or `exhaustion`; those remain
+`derived`. `StanceDecision` uses the same principle: factual
+`user_right/user_wrong` stays `unknown` unless externally verified.
+
 ## Selection
 
 Policies declare preconditions, and the most constrained applicable policy
@@ -175,8 +209,10 @@ eq_layer/
   policies.py   joint affect/intent policy taxonomy + selector
   affect.py           affect-state tracker interface + zero-dependency structural fallback
   trained_affect.py   learned VAD regressor + multi-turn affect adapter
-  trained_subtext.py  learned dialogue-act/emotion signals + conservative subtext derivation
-  tracker.py          composes affect, subtext and stance into policy state
+  trained_subtext.py     learned dialogue-act/emotion signals + conservative subtext derivation
+  trained_disagreement.py experimental direct-disagreement model; verified no-go for routing
+  trained_breakdown.py   experimental text-only breakdown model; verified no-go for routing
+  tracker.py             composes affect, subtext and stance into policy state
   intent.py           intent state + zero-dependency fallback
   trained_intent.py   learned TF-IDF + logistic-regression adapter
   data/intent_train.jsonl  bundled training corpus
@@ -229,17 +265,19 @@ The remaining limitations are:
 - **`question` vs `challenge`** turns on whether escalation markers are
   present, not on punctuation. `Sözleşme kaç gün geçerli?` is a question;
   `Sen de mi?!` is a challenge.
-- **Exhaustion is undetectable from words.** A resigned transcript contains no
-  crisis vocabulary at all. It requires annotation, and pretending otherwise
-  is how this layer starts confidently wrong.
+- **Exhaustion/resignation still lacks direct supervision.** The current label
+  is a `derived` composition of learned sadness plus low-valence/low-arousal
+  state. It must not be described as a directly learned exhaustion classifier.
 - **First-word matching strips punctuation.** `Neden?` must match `neden` or
   the one-word repeated question — the exact shape `escalating` exists to
   catch — silently never fires.
 
-The remaining hard gap is direct supervision for higher-level dialogue states
-such as correction, exhaustion/resignation, and factual stance. The current
-tracker exposes where those labels are derived or externally supplied instead
-of hiding the distinction.
+The remaining hard gap is direct, transferable supervision for higher-level
+states such as correction, exhaustion/resignation, and factual stance. Two
+plausible direct proxies — disagreement detection and text-only breakdown
+detection — were tested and retained as no-go results instead of being wired
+into policy routing. The tracker exposes where labels are direct, derived,
+structural, fallback, or externally verified.
 
 ## Contributing
 
