@@ -33,16 +33,38 @@ messages = [
 ]
 state = HeuristicAffect().infer(messages)
 selection = Selector().select(state)
+print(selection.policy.name, selection.rationale)
 
 print(selection.policy.name)
 prompt = Steer.build(selection.policy).apply_to_prompt(messages[-1]["content"])
 ```
 
-Run the seeded cases:
+Run the seeded cases. Exits non-zero on any mismatch or any policy that no
+case can reach:
 
 ```bash
 python eval/run.py
 ```
+
+## Selection
+
+Policies declare preconditions, and the most constrained applicable policy
+wins. There is no first-match rule, so adding a policy cannot silently change
+what a looser one does to a state you did not think about.
+
+Two consequences worth arguing about:
+
+- **Ties are broken by declaration order**, which is arbitrary and a real
+  weakness. If two policies of equal specificity both apply, that is a
+  taxonomy problem, not a tie to be won.
+- **`stance` is not guessed.** Whether the user is right is a semantic
+  judgement, so the tracker returns `unknown` unless a case or caller supplies
+  one. Policies that need it declare `user_is_right` or `stance_unknown`, so
+  "I could not tell" stays visible in the output instead of becoming a
+  confident wrong answer.
+
+Cases can carry `annotated` fields (`stance`, `subtext`) for signals that
+keywords genuinely cannot recover — exhaustion is the current example.
 
 ## Layout
 
@@ -65,6 +87,28 @@ Three metrics, deliberately narrow:
 - **escalation latency** — how many turns pass after tension rises before the register changes.
 
 If genericness is not penalised, a model will score well by saying nothing in particular.
+
+## Detection is the weak part
+
+The tracker is keywords, not a classifier. It is readable on purpose — when a
+signal fires you can see why without a gradient — but it is wrong in ways that
+matter, and the failures are instructive:
+
+- **`escalating_past_n` excludes the current turn.** The question is whether
+  the preceding turns were rising, so one polite message after three hostile
+  ones does not reset the register.
+- **`question` vs `challenge`** turns on whether escalation markers are
+  present, not on punctuation. `Sözleşme kaç gün geçerli?` is a question;
+  `Sen de mi?!` is a challenge.
+- **Exhaustion is undetectable from words.** A resigned transcript contains no
+  crisis vocabulary at all. It requires annotation, and pretending otherwise
+  is how this layer starts confidently wrong.
+- **First-word matching strips punctuation.** `Neden?` must match `neden` or
+  the one-word repeated question — the exact shape `escalating` exists to
+  catch — silently never fires.
+
+Replacing this with a trained tracker is the obvious next step, and
+`AffectAdapter` is the seam for it.
 
 ## Contributing
 

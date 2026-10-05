@@ -1,5 +1,5 @@
 from .affect import AffectAdapter, HeuristicAffect, load_cases
-from .policies import POLICIES, REGISTRY, AffectState, Policy, Register, Selector
+from .policies import POLICIES, REGISTRY, SUBTEXTS, AffectState, Policy, Register, Selector
 from .steer import Steer, aggregate, score_case
 
 __all__ = [
@@ -10,6 +10,7 @@ __all__ = [
     "Policy",
     "REGISTRY",
     "Register",
+    "SUBTEXTS",
     "Selector",
     "Steer",
     "aggregate",
