@@ -36,6 +36,8 @@ jobs:
         run: python eval/interaction_state_eval.py
       - name: Run blind A/B harness smoke test
         run: python eval/ab_harness_eval.py
+      - name: Run response auditor test
+        run: python eval/response_auditor_eval.py
       - name: Run response experiment engine smoke test
         run: python eval/response_experiment_eval.py
       - name: Run stratified pilot selection test
