@@ -1,0 +1,41 @@
+name: Build External Heldout
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/build_ab_heldout.py"
+      - "eval/ab_case_preflight.py"
+      - "eq_layer/response_experiment.py"
+      - ".github/workflows/heldout-build.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: eq-layer-heldout-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build deterministic external held-out set
+        run: |
+          mkdir -p artifacts
+          python tools/build_ab_heldout.py \
+            --output artifacts/ab_heldout_120.jsonl \
+            --manifest artifacts/ab_heldout_120.manifest.json \
+            --seed 20261005
+      - name: Enforce final held-out preflight
+        run: python eval/ab_case_preflight.py artifacts/ab_heldout_120.jsonl --final
+      - name: Upload frozen held-out artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq-layer-ab-heldout-120
+          path: |
+            artifacts/ab_heldout_120.jsonl
+            artifacts/ab_heldout_120.manifest.json
+          if-no-files-found: error
