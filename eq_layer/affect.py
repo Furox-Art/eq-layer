@@ -58,6 +58,11 @@ CORRECTION_MARKERS = (
     "you misunderstood",
     "no, i meant",
     "i didn't say that",
+    "that doesn't work",
+    "that does not work",
+    "that doesn’t work",
+    "that's wrong",
+    "that is wrong",
 )
 
 DISCLOSURE_MARKERS = (
