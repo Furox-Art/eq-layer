@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from .intent import IntentState
 from .policies import Policy, Register
 
 # Cheap under human raters. A model that is not penalised for these will
@@ -33,19 +34,31 @@ GENERIC_PHRASES = (
 @dataclass
 class Steer:
     policy: Policy
+    intent: IntentState | None = None
     prefix: str = ""
     logit_bias: dict[int, float] = field(default_factory=dict)
 
     @classmethod
-    def build(cls, policy: Policy) -> "Steer":
-        return cls(policy=policy, prefix=f"[{policy.register.value}] ")
+    def build(cls, policy: Policy, intent: IntentState | None = None) -> "Steer":
+        return cls(policy=policy, intent=intent, prefix=f"[{policy.register.value}] ")
 
     def apply_to_prompt(self, user_message: str) -> str:
         avoid = "; ".join(self.policy.avoid)
+        intent_block = ""
+        if self.intent is not None:
+            constraints = ", ".join(self.intent.constraints) or "none"
+            intent_block = (
+                f"\nUser intent: {self.intent.canonical_request}"
+                f"\nIntent kind: {self.intent.kind}; response mode: {self.intent.response_mode}; "
+                f"confidence: {self.intent.confidence:.2f}; constraints: {constraints}."
+            )
+            if self.intent.needs_clarification:
+                intent_block += "\nDo not guess the missing referent. Ask exactly one targeted question."
+
         return (
             f"Respond using the {self.policy.name} policy "
             f"({self.policy.register.value}). {self.policy.summary} "
-            f"Avoid: {avoid}.\n\nUser: {user_message}"
+            f"Avoid: {avoid}.{intent_block}\n\nUser: {user_message}"
         )
 
 
