@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
+from .auditor import audit_from_generation_metadata
 from .policies import Selector
 from .steer import Steer
 from .tracker import ConversationTracker
@@ -472,6 +473,12 @@ def generate_pairs(
                     condition=condition,
                 )
 
+            response_audit = audit_from_generation_metadata(
+                responses["eq"],
+                messages,
+                eq_meta,
+            ).to_dict()
+
             output.append(
                 {
                     "id": case_id,
@@ -486,6 +493,7 @@ def generate_pairs(
                         "order": conditions,
                         "same_model_both_arms": True,
                         "annotations_used": bool(annotated),
+                        "response_audit": response_audit,
                         **eq_meta,
                     },
                 }
@@ -517,6 +525,7 @@ def experiment_manifest(
         "global_seed": global_seed,
         "n_cases": n_cases,
         "annotations_used": allow_annotations,
+        "response_auditor_mode": "passive-metadata-only",
         "cases_path": str(cases_path),
         "cases_sha256": file_sha256(cases_path),
         "affect_model_sha256": file_sha256(affect_model),
