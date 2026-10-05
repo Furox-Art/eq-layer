@@ -14,6 +14,7 @@ from eq_layer.response_experiment import (  # noqa: E402
     experiment_manifest,
     generate_pairs,
     stable_case_seed,
+    validate_experiment_cases,
 )
 
 
@@ -100,6 +101,35 @@ def main() -> int:
         != stable_case_seed(17, "heldout-001")
     ):
         raise AssertionError("Per-case seed is not deterministic.")
+
+    pilot_preflight = validate_experiment_cases(cases, final=False)
+    if not pilot_preflight["ok"]:
+        raise AssertionError(f"Pilot preflight unexpectedly failed: {pilot_preflight}")
+
+    leaked = [
+        {
+            "id": "leaked-001",
+            "transcript": [{"role": "user", "content": "Status?"}],
+            "expected_policy": "report_status",
+        }
+    ]
+    leaked_report = validate_experiment_cases(leaked, final=True)
+    if leaked_report["ok"] or not any(
+        "development/gold fields" in error
+        for error in leaked_report["errors"]
+    ):
+        raise AssertionError("Final preflight did not reject gold/development fields.")
+
+    final_cases = [
+        {
+            "id": f"final-{index:03d}",
+            "transcript": [{"role": "user", "content": f"Question {index}?"}],
+        }
+        for index in range(120)
+    ]
+    final_report = validate_experiment_cases(final_cases, final=True)
+    if not final_report["ok"]:
+        raise AssertionError(f"Valid final preflight failed: {final_report}")
 
     with tempfile.TemporaryDirectory(prefix="eq-layer-ab-smoke-") as tmp:
         tmp_path = Path(tmp)
