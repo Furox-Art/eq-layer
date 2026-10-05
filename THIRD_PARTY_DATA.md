@@ -34,3 +34,43 @@ EQ-Layer can train its learned dialogue-act/emotion signal tracker from the Engl
 Recommended citations:
 - Liu, Z. et al. (2023). *XDailyDialog: A Multilingual Parallel Dialogue Corpus*. ACL 2023.
 - Li, Y. et al. (2017). *DailyDialog: A Manually Labelled Multi-turn Dialogue Dataset*. IJCNLP 2017.
+
+## Coarse Discourse Corpus
+
+EQ-Layer audits direct disagreement supervision using the Coarse Discourse corpus.
+
+- Original dataset/code repository: `google-research-datasets/coarse-discourse`
+- Original repository license statement: CC-by
+- Runtime archive: ConvoKit Reddit Coarse Discourse package
+- Pinned archive SHA-256: `33cc25e906e677881c0031c1e134460b1e389fac707f2e52fe59b484dc6d0b61`
+- Direct disagreement examples observed: 3,394 / 101,219 labelled utterances
+
+The corpus is **not vendored**. The direct-disagreement classifier is retained only as an experimental research artifact because the verified test result is not strong enough for policy routing. See `eval/results/coarse_disagreement_no_go.json`.
+
+Recommended citation:
+- Zhang, A. X., Culbertson, B., & Paritosh, P. (2017). *Characterizing Online Discussion Using Coarse Discourse Sequences*. ICWSM 2017.
+
+## DialogBank
+
+EQ-Layer uses the public English DialogBank DiAML annotations only for a label-availability audit.
+
+- English dialogues successfully parsed: 15
+- Dialogue acts parsed: 2,680
+- Direct target counts: correction=4, disagreement=1, agreement=55, selfCorrection=98
+- Parse failures in the verified audit: 0
+
+No classifier is trained from these counts. In particular, `selfCorrection` is not relabelled as a user correcting the assistant. The source files are not vendored, and this repository does not make a new licensing claim over DialogBank. See `eval/results/dialogbank_label_inventory.json`.
+
+## DBDC3
+
+EQ-Layer audits text-only dialogue-breakdown detection using the English DBDC3 release.
+
+- Runtime archive: `https://dbd-challenge.github.io/dbdc3/data/DBDC3.zip`
+- Pinned archive SHA-256: `736229795dc3732f8e6bb421f094dc820ef944fef9d9d320d4110ef992b60e85`
+- Effective source used: `dbdc3_revised` only, so original/revised duplicate dialogues are not mixed
+- Official revised dev: 4,124 annotated system turns / 414 dialogues
+- Official revised eval: 1,998 annotated system turns / 200 dialogues
+
+The upstream GitHub repository does not expose a repository license file that EQ-Layer can safely reinterpret for the dataset. The archive is therefore **not vendored**, and users must verify upstream terms independently.
+
+The verified text-only breakdown model is a **no-go** for routing: on the untouched revised eval split it reached ROC-AUC 0.5057. See `eval/results/dbdc3_breakdown_no_go.json`.
