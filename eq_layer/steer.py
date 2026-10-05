@@ -77,6 +77,20 @@ class Steer:
                 f"\nIntent kind: {self.intent.kind}; response mode: {self.intent.response_mode}; "
                 f"confidence: {self.intent.confidence:.2f}; constraints: {constraints}."
             )
+            if self.intent.belief is not None:
+                belief_text = ", ".join(
+                    f"{label}={probability:.3f}"
+                    for label, probability in self.intent.belief.ranked
+                )
+                intent_block += (
+                    f"\nIntent belief: {belief_text}."
+                    f" Entropy={self.intent.belief.normalized_entropy:.3f}."
+                )
+            if self.intent.risk_decision is not None:
+                intent_block += (
+                    f"\nIntent routing decision: {self.intent.risk_decision.action}; "
+                    f"expected_loss={self.intent.risk_decision.expected_loss:.3f}."
+                )
             if self.intent.needs_clarification:
                 intent_block += "\nDo not guess the missing referent. Ask exactly one targeted question."
 
