@@ -50,8 +50,6 @@ REPAIR_RE = re.compile(
     r"i said|"
     r"i meant|"
     r"meant to say|"
-    r"not that|"
-    r"not the|"
     r"that's wrong|"
     r"that is wrong|"
     r"didn't say|"
