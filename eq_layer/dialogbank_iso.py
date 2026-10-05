@@ -175,7 +175,13 @@ def _parse_diaml_legacy(xml_text: str, source_url: str) -> list[ISOExample]:
         )
 
     if not examples:
-        raise ValueError(f"Legacy DialogBank parser recovered no dialogue acts: {source_url}")
+        tags = Counter(
+            re.findall(r"<\\s*/?\\s*([A-Za-z_][\\w:.-]*)", xml_text)
+        ).most_common(24)
+        raise ValueError(
+            f"Legacy DialogBank parser recovered no dialogue acts: {source_url}; "
+            f"top_tags={tags}"
+        )
     return examples
 
 
