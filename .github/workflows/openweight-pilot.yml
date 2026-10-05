@@ -71,7 +71,7 @@ jobs:
             --subtext-model artifacts/xdailydialog_subtext.joblib \
             --temperature 0 \
             --seed 42 \
-            --limit 12 \
+            --stratified-limit 12 \
             --persistent-model-command \
             --git-commit "$GITHUB_SHA"
 
