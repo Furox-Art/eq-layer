@@ -160,6 +160,57 @@ class IntentRiskDecision:
         return dict(self.losses)
 
 
+
+def fuse_dialogue_evidence(
+    belief: IntentBelief,
+    *,
+    text: str,
+    dialogue_act: str | None = None,
+    act_confidence: float = 0.0,
+) -> tuple[IntentBelief, tuple[str, ...]]:
+    """Fuse independent dialogue-form evidence into an intent posterior.
+
+    This is likelihood reweighting, not a hard label override. The raw learned
+    posterior should be retained separately by callers for provenance.
+    """
+    values = belief.as_dict()
+    weights = {label: 1.0 for label in INTENT_LABELS}
+    evidence: list[str] = []
+
+    confidence = max(0.0, min(1.0, float(act_confidence)))
+    if dialogue_act == "inform":
+        weights["statement"] *= 1.0 + 5.0 * confidence
+        evidence.append(f"dialogue_act:inform:{confidence:.3f}")
+    elif dialogue_act == "question":
+        weights["question"] *= 1.0 + 4.0 * confidence
+        weights["status_check"] *= 1.0 + 1.0 * confidence
+        weights["explanation"] *= 1.0 + 1.0 * confidence
+        evidence.append(f"dialogue_act:question:{confidence:.3f}")
+    elif dialogue_act == "directive":
+        weights["action_request"] *= 1.0 + 5.0 * confidence
+        evidence.append(f"dialogue_act:directive:{confidence:.3f}")
+    elif dialogue_act == "commissive":
+        weights["statement"] *= 1.0 + 2.0 * confidence
+        evidence.append(f"dialogue_act:commissive:{confidence:.3f}")
+
+    # Surface punctuation is an independent structural observation. It guards
+    # against a dialogue-act classifier incorrectly calling an explicit
+    # question an inform/statement.
+    if text.rstrip().endswith("?"):
+        weights["question"] *= 4.0
+        weights["status_check"] *= 1.5
+        weights["explanation"] *= 1.5
+        weights["statement"] *= 0.25
+        evidence.append("structure:question_mark")
+
+    fused = IntentBelief.from_mapping(
+        {
+            label: values[label] * weights[label]
+            for label in INTENT_LABELS
+        }
+    )
+    return fused, tuple(evidence)
+
 def expected_loss(belief: IntentBelief, decision: str) -> float:
     if decision not in LOSS_MATRIX:
         raise ValueError(f"Unsupported intent decision: {decision}")
