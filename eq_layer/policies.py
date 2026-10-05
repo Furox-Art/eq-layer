@@ -191,7 +191,7 @@ POLICIES: tuple[Policy, ...] = (
         summary="After a correction, ask exactly one question — the one that unblocks the next step.",
         preconditions=("subtext:correction",),
         avoid=("Three or more questions.", "Questions stacked into an interrogation."),
-        example_opener="Haklısın, tarihi yanlış okumuşum. Doğru tarih yaklaşık kaçıncıydı?",
+        example_opener="Ne demek istediğini yanlış yakalamışım. Hangi sürümü kastediyorsun?",
     ),
     Policy(
         name="repair_hold_position",
@@ -199,7 +199,7 @@ POLICIES: tuple[Policy, ...] = (
         summary="Pushed repeatedly: keep the position. Neither capitulate nor argue.",
         preconditions=("subtext:challenge", "stance_unknown"),
         avoid=("Total capitulation.", "Defending why you were right.", "Re-explaining the same thing."),
-        example_opener="Haklısın, yanlış okudum. Yine de önerim aynı çünkü gerekçesi değişmedi.",
+        example_opener="İtirazını gördüm. Önerim yine aynı; gerekçesi değişmedi.",
     ),
     Policy(
         name="repair_interrogation",
@@ -220,10 +220,10 @@ POLICIES: tuple[Policy, ...] = (
     Policy(
         name="boundary",
         register=Register.BOUNDARY,
-        summary="Decline without moralising about the request.",
+        summary="Set a privacy boundary without pretending the system can guarantee confidentiality.",
         preconditions=("subtext:disclosure_request",),
-        avoid=("Lecturing.", "Repeating the refusal after it was accepted."),
-        example_opener="Kimseye söylemem. Sadece bu sohbette kalır.",
+        avoid=("Lecturing.", "Promising absolute secrecy or confidentiality."),
+        example_opener="Bunu gereksiz yere tekrarlamam; ama mutlak gizlilik garantisi veremem.",
     ),
     Policy(
         name="hold_sustained_escalation",
