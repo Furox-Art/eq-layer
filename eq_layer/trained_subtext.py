@@ -49,6 +49,7 @@ class SubtextDecision:
     label: str
     confidence: float
     signals: DialogueSignals | None
+    evidence_level: str = "unknown"
     evidence: tuple[str, ...] = ()
 
 
@@ -232,6 +233,7 @@ class TrainedSubtext:
                 label=str(annotated["subtext"]),
                 confidence=1.0,
                 signals=None,
+                evidence_level="verified",
                 evidence=("annotation",),
             )
 
@@ -240,6 +242,7 @@ class TrainedSubtext:
                 label="statement",
                 confidence=0.0,
                 signals=None,
+                evidence_level="fallback",
                 evidence=("empty_user_turn",),
             )
 
@@ -248,6 +251,7 @@ class TrainedSubtext:
                 label="correction",
                 confidence=1.0,
                 signals=None,
+                evidence_level="structural",
                 evidence=("structural:correction_marker",),
             )
         if self.structural._has(current, DISCLOSURE_MARKERS):
@@ -255,6 +259,7 @@ class TrainedSubtext:
                 label="disclosure_request",
                 confidence=1.0,
                 signals=None,
+                evidence_level="structural",
                 evidence=("structural:disclosure_marker",),
             )
         if self.structural._escalating(user_turns):
@@ -262,6 +267,7 @@ class TrainedSubtext:
                 label="escalating",
                 confidence=0.95,
                 signals=None,
+                evidence_level="structural",
                 evidence=("structural:repeated_question_run",),
             )
         if self.structural._demand_pattern(user_turns):
@@ -269,6 +275,7 @@ class TrainedSubtext:
                 label="demand",
                 confidence=0.95,
                 signals=None,
+                evidence_level="structural",
                 evidence=("structural:stacked_short_demands",),
             )
 
@@ -291,6 +298,7 @@ class TrainedSubtext:
                 "demand",
                 signals,
                 "derived:directive_plus_heat",
+                evidence_level="derived",
             )
 
         if (
@@ -304,6 +312,7 @@ class TrainedSubtext:
                 "challenge",
                 signals,
                 "derived:question_plus_negative_high_arousal",
+                evidence_level="derived",
             )
 
         if (
@@ -319,16 +328,27 @@ class TrainedSubtext:
                 label,
                 signals,
                 "derived:sadness_plus_low_valence_low_arousal",
+                evidence_level="derived",
             )
 
         if act_reliable and signals.act == "question":
-            return self._decision("question", signals, "learned_act:question")
+            return self._decision(
+                "question",
+                signals,
+                "learned_act:question",
+                evidence_level="direct_learned",
+            )
 
         # A calm directive is not automatically a "demand". Intent handles the
         # requested action; subtext remains plain unless heat is independently
         # supported.
         if act_reliable and signals.act in {"inform", "directive", "commissive"}:
-            return self._decision("statement", signals, f"learned_act:{signals.act}")
+            return self._decision(
+                "statement",
+                signals,
+                f"learned_act:{signals.act}",
+                evidence_level="direct_learned",
+            )
 
         # Low-confidence learned signals fall back to the auditable structural
         # tracker instead of being converted into a confident subtext.
@@ -337,6 +357,7 @@ class TrainedSubtext:
             label=fallback,
             confidence=max(signals.act_confidence, signals.emotion_confidence),
             signals=signals,
+            evidence_level="fallback",
             evidence=("low_confidence:fallback_structural",),
         )
 
@@ -391,6 +412,8 @@ class TrainedSubtext:
         label: str,
         signals: DialogueSignals,
         evidence: str,
+        *,
+        evidence_level: str,
     ) -> SubtextDecision:
         confidence = min(
             1.0,
@@ -400,5 +423,6 @@ class TrainedSubtext:
             label=label,
             confidence=round(confidence, 4),
             signals=signals,
+            evidence_level=evidence_level,
             evidence=(evidence,),
         )
