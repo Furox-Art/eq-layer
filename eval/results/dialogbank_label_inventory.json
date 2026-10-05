@@ -1,0 +1,16 @@
+{
+  "benchmark": "DialogBank-ISO-24617-2-label-inventory",
+  "github_actions_run_id": 37359422268,
+  "scope": "English DialogBank pages currently enumerated by eq_layer/dialogbank_iso.py",
+  "dialogues": 15,
+  "examples": 2680,
+  "parse_failures": [],
+  "target_counts": {
+    "correction": 4,
+    "disagreement": 1,
+    "agreement": 55,
+    "selfCorrection": 98,
+    "correctMisspeaking": 0
+  },
+  "decision": "Do not train EQ-Layer correction/disagreement classifiers from this inventory: direct correction and disagreement counts are insufficient. selfCorrection is a different semantic target and is not relabeled as user correction of the assistant."
+}
