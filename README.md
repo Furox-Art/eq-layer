@@ -14,7 +14,7 @@ Asking a model to be more empathetic is style transfer. It produces *more* of th
 So this repo does not retrain the model. It adds a layer:
 
 1. **Affect state** — `{valence, arousal, escalation_delta, stance, subtext}` as an explicit intermediate representation, tracked across turns. `escalation_delta` is the point: snapshot classification cannot see a trend.
-2. **Intent state** — `{kind, canonical_request, response_mode, confidence, constraints}` rewrites the request into an inspectable control signal without inventing missing details.
+2. **Intent belief state** — the learned classifier preserves the full posterior over `action_request/status_check/explanation/question/statement/unknown` instead of collapsing uncertainty to one confidence number. A transparent one-step Bayes-risk router chooses whether to act or clarify from that distribution. This is POMDP-inspired uncertainty handling, not a full POMDP.
 3. **Conversation health state** — `repair` identifies observable user→assistant misalignment and its target; `interaction_quality` tracks structural conversation failure separately from emotion using current score, delta, repeated failures, unresolved repair, and clarification load.
 4. **Policy selection** — affect and intent jointly choose a response-policy family (`mirror`, `direct`, `repair`, `hold`, `boundary`, ...). Selection is a discrete decision, not generation.
 5. **Factored action compilation** — the selected policy is split into orthogonal controls: `task_move`, `social_move`, `repair_move`, and `realization`. The task is driven primarily by user intent, so affective adaptation cannot silently replace what the user actually asked for.
@@ -127,14 +127,28 @@ word and character TF-IDF features. The bundled corpus currently contains
 Turkish and English examples for `action_request`, `status_check`,
 `explanation`, `question`, `statement`, and `unknown`.
 
-The classifier emits a probability. Predictions below the confidence threshold
-become `unknown` and request clarification instead of being silently promoted
-to a guessed task. Explicit constraints such as `brief`, `scope_limited`,
-and `no_guess` remain deterministic because they are control requirements,
-not semantic labels.
+The classifier emits a full posterior distribution, exposed as
+`IntentBelief`. Production routing no longer discards that distribution behind
+a single confidence/margin threshold. `decide_intent_action` computes the
+expected interaction loss of each response move and clarification, then chooses
+the minimum-risk action. For example, ambiguity between a status check and a
+generic question can still be answered because the semantic mismatch cost is
+small, while ambiguity between executing an action and merely responding to a
+statement can trigger clarification.
 
-`HeuristicIntent` remains available as a zero-dependency fallback. It is no
-longer the adapter used by the main evaluation harness.
+The current loss matrix is **hand-specified and transparent, not learned or
+claimed optimal**. It encodes relative interaction costs and must be calibrated
+or sensitivity-tested before strong real-world claims. The old confidence and
+margin fields remain serialized for backwards compatibility and diagnostics;
+they no longer choose the learned intent route.
+
+Explicit constraints such as `brief`, `scope_limited`, and `no_guess`
+remain deterministic because they are control requirements, not semantic
+labels.
+
+`HeuristicIntent` remains available as a zero-dependency fallback. It does not
+manufacture a learned posterior and is no longer the adapter used by the main
+evaluation harness.
 
 Affect can still override intent during sustained escalation. A clear action
 request should drive the response in a calm turn; it should not erase a
@@ -313,7 +327,8 @@ eq_layer/
   trained_breakdown.py   experimental text-only breakdown model; verified no-go for routing
   tracker.py             composes affect, subtext, stance, repair and interaction quality
   intent.py           intent state + zero-dependency fallback
-  trained_intent.py   learned TF-IDF + logistic-regression adapter
+  intent_belief.py    posterior belief + transparent Bayes-risk router
+  trained_intent.py   learned TF-IDF + logistic-regression posterior adapter
   data/intent_train.jsonl  bundled training corpus
   steer.py               policy + intent → decode path, and the scorer
   response_experiment.py same-model baseline-vs-EQ generation engine
