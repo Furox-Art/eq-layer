@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from importlib import resources
 from pathlib import Path
 from typing import Iterable
 
 from .intent import HeuristicIntent, IntentState
-from .intent_belief import IntentBelief, decide_intent_action
+from .intent_belief import IntentBelief, decide_intent_action, fuse_dialogue_evidence
 
 
 def build_pipeline():
@@ -184,6 +184,78 @@ class TrainedIntent:
                 f"training_examples:{self.training_examples}",
             ),
             belief=belief,
+            risk_decision=decision,
+        )
+
+    def reconcile_with_dialogue_evidence(
+        self,
+        state: IntentState,
+        messages: list[dict],
+        signals: object | None,
+    ) -> IntentState:
+        """Fuse dialogue-act/structural evidence without discarding raw posterior."""
+        if state.belief is None:
+            return state
+
+        user_turns = [
+            str(message.get("content", ""))
+            for message in messages
+            if message.get("role") == "user"
+        ]
+        current = user_turns[-1].strip() if user_turns else ""
+
+        act = getattr(signals, "act", None) if signals is not None else None
+        act_confidence = (
+            float(getattr(signals, "act_confidence", 0.0))
+            if signals is not None
+            else 0.0
+        )
+        fused, fusion_evidence = fuse_dialogue_evidence(
+            state.belief,
+            text=current,
+            dialogue_act=act,
+            act_confidence=act_confidence,
+        )
+        if not fusion_evidence:
+            return state
+
+        decision = decide_intent_action(fused)
+        kind = decision.selected_intent or "unknown"
+        explicit = kind in {
+            "action_request",
+            "status_check",
+            "explanation",
+            "question",
+        }
+        needs_clarification = decision.action == "clarify"
+        response_mode = {
+            "action_request": "execute",
+            "status_check": "direct",
+            "explanation": "explain",
+            "question": "direct",
+            "statement": "contextual",
+            "unknown": "clarify",
+        }[kind]
+        constraints = state.constraints
+
+        return replace(
+            state,
+            kind=kind,
+            canonical_request=self.fallback._canonical(
+                kind,
+                current,
+                constraints,
+            ),
+            response_mode=response_mode,
+            confidence=round(fused.top_probability, 4),
+            explicit=explicit,
+            needs_clarification=needs_clarification,
+            evidence=state.evidence + tuple(
+                f"belief_fusion:{item}" for item in fusion_evidence
+            ) + (
+                f"fused_routing:{decision.rationale}",
+            ),
+            belief=fused,
             risk_decision=decision,
         )
 
