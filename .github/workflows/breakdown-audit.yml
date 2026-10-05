@@ -17,5 +17,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install ML dependencies
+        run: python -m pip install -e ".[ml]"
       - name: Run DBDC3 inventory
         run: python eval/dbdc3_inventory.py
+      - name: Run DBDC3 breakdown benchmark
+        run: python eval/dbdc3_breakdown_eval.py
