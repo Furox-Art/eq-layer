@@ -42,5 +42,7 @@ jobs:
         run: python eval/stratified_case_selection_eval.py
       - name: Run intent belief Bayes-risk test
         run: python eval/intent_belief_eval.py
+      - name: Run intent dialogue-evidence fusion test
+        run: python eval/intent_evidence_fusion_eval.py
       - name: Run trained intent evaluation
         run: python eval/intent_eval.py
