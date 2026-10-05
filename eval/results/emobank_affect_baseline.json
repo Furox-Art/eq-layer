@@ -1,0 +1,22 @@
+{
+  "benchmark": "EmoBank-official-split",
+  "upstream_repository": "JULIELab/EmoBank",
+  "upstream_commit": "248ce2a43e165a66d31aeaed83cff9641d6654e0",
+  "upstream_license": "CC-BY-SA-4.0",
+  "github_actions_run_id": 37351122409,
+  "model": "tfidf-word-char-ridge",
+  "train_examples": 8062,
+  "dev_examples": 1000,
+  "test_examples": 1000,
+  "dev": {
+    "V": {"mae": 0.2056, "mean_baseline_mae": 0.2380, "spearman_rho": 0.5203},
+    "A": {"mae": 0.1763, "mean_baseline_mae": 0.1911, "spearman_rho": 0.3870},
+    "D": {"mae": 0.1441, "mean_baseline_mae": 0.1519, "spearman_rho": 0.2669}
+  },
+  "test": {
+    "V": {"mae": 0.2125, "mean_baseline_mae": 0.2449, "spearman_rho": 0.5460},
+    "A": {"mae": 0.1782, "mean_baseline_mae": 0.1904, "spearman_rho": 0.3120},
+    "D": {"mae": 0.1494, "mean_baseline_mae": 0.1563, "spearman_rho": 0.2573}
+  },
+  "interpretation": "Development baseline only. The learned regressor beats a train-mean baseline on MAE for V/A/D, but arousal and dominance rank correlations remain modest."
+}
