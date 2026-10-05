@@ -11,6 +11,7 @@ from .trained_subtext import SubtextDecision, TrainedSubtext
 class StanceDecision:
     label: str
     confidence: float
+    evidence_level: str = "unknown"
     evidence: tuple[str, ...] = ()
 
 
@@ -39,11 +40,13 @@ class AnnotationStanceResolver:
             return StanceDecision(
                 label="unknown",
                 confidence=0.0,
+                evidence_level="unknown",
                 evidence=("no_external_verification",),
             )
         return StanceDecision(
             label=stance,
             confidence=1.0,
+            evidence_level="verified",
             evidence=("external_annotation",),
         )
 
