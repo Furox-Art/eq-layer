@@ -22,6 +22,13 @@ class BreakdownTurn:
     counts: dict[str, int]
 
     @property
+    def model_text(self) -> str:
+        context = "\n".join(self.context)
+        if context:
+            return f"{context}\n[SYSTEM]\n{self.text}"
+        return self.text
+
+    @property
     def score(self) -> float:
         total = sum(self.counts.values())
         if not total:
