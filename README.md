@@ -33,13 +33,16 @@ pip install "eq-layer[ml]"
 ```
 
 ```python
-from eq_layer import Selector, Steer, TrainedAffect, TrainedIntent
+from eq_layer import ConversationTracker, Selector, Steer, TrainedAffect, TrainedIntent, TrainedSubtext
 
 messages = [
     {"role": "user", "content": "Randevumu üç kez değiştirdiler"},
 ]
 affect = TrainedAffect.load("artifacts/emobank_affect.joblib")
-state = affect.infer(messages)
+subtext = TrainedSubtext.load("artifacts/xdailydialog_subtext.joblib")
+tracker = ConversationTracker(affect=affect, subtext=subtext)
+tracked = tracker.infer(messages)
+state = tracked.state
 intent = TrainedIntent.from_bundled().infer(messages)
 selection = Selector().select(state, intent)
 print(selection.policy.name, intent.canonical_request)
@@ -73,6 +76,19 @@ python eval/emobank_affect_eval.py
 EmoBank is not bundled into this repository. The training/evaluation path uses
 the upstream train/dev/test split and records its pinned commit and
 CC-BY-SA-4.0 provenance in `THIRD_PARTY_DATA.md`.
+
+Train the learned dialogue-signal tracker from pinned XDailyDialog files:
+
+```bash
+python tools/train_xdailydialog_subtext.py --output artifacts/xdailydialog_subtext.joblib
+python eval/xdailydialog_subtext_eval.py
+```
+
+XDailyDialog provides supervised dialogue-act and basic-emotion labels. EQ-Layer
+does **not** pretend that `challenge`, `demand`, or `exhaustion` are direct
+upstream labels: those are conservative compositions of learned dialogue
+signals with learned V/A state. See `THIRD_PARTY_DATA.md` for the license-chain
+caution on the English data.
 
 ## Intent is a control signal, not mind-reading
 
@@ -141,6 +157,8 @@ eq_layer/
   policies.py   joint affect/intent policy taxonomy + selector
   affect.py           affect-state tracker interface + zero-dependency structural fallback
   trained_affect.py   learned VAD regressor + multi-turn affect adapter
+  trained_subtext.py  learned dialogue-act/emotion signals + conservative subtext derivation
+  tracker.py          composes affect, subtext and stance into policy state
   intent.py           intent state + zero-dependency fallback
   trained_intent.py   learned TF-IDF + logistic-regression adapter
   data/intent_train.jsonl  bundled training corpus
@@ -160,16 +178,32 @@ Three metrics, deliberately narrow:
 
 If genericness is not penalised, a model will score well by saying nothing in particular.
 
-## Affect is now partly learned
+## Affect and conversational signals are now partly learned
 
 `TrainedAffect` learns continuous Valence, Arousal and Dominance from EmoBank,
 then converts Valence to `[-1, 1]` and Arousal to `[0, 1]` for policy state.
 Multi-turn `escalation_delta` is computed from consecutive learned arousal
 predictions rather than keyword counts.
 
-This does **not** make the whole affect state learned. `subtext` and `stance`
-remain explicit structural/annotated signals, because EmoBank contains VAD
-ratings rather than dialogue-policy labels. The remaining limitations are:
+`TrainedSubtext` separately learns dialogue-act and basic-emotion signals from
+XDailyDialog. Those supervised signals are then combined with V/A state to
+derive higher-level control labels conservatively:
+
+- learned `question` -> `question`
+- learned `directive` + independent heat -> `demand`
+- learned `question` + anger/disgust + high arousal -> `challenge`
+- learned sadness + negative low-arousal V/A -> `exhaustion` / `resignation`
+
+`correction` and disclosure boundaries remain structural because the chosen
+upstream data does not directly supervise those categories.
+
+`stance=user_right/user_wrong` is **not** inferred from generic dialogue.
+Whether a user is factually or procedurally correct requires external evidence.
+`AnnotationStanceResolver` therefore emits `unknown` unless a verifier or
+annotation supplies a stance. This is intentional rather than a missing
+confidence threshold.
+
+The remaining limitations are:
 
 - **`escalating_past_n` excludes the current turn.** The question is whether
   the preceding turns were rising, so one polite message after three hostile
