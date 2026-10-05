@@ -24,7 +24,6 @@ import json
 import random
 import re
 import tarfile
-import tempfile
 import urllib.request
 from collections import defaultdict
 from pathlib import Path
