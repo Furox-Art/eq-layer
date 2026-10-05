@@ -40,6 +40,8 @@ jobs:
         run: python eval/response_experiment_eval.py
       - name: Run stratified pilot selection test
         run: python eval/stratified_case_selection_eval.py
+      - name: Run heldout repair sampling test
+        run: python eval/heldout_repair_sampling_eval.py
       - name: Run intent belief Bayes-risk test
         run: python eval/intent_belief_eval.py
       - name: Run intent risk sensitivity audit test
