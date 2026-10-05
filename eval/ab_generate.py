@@ -31,6 +31,7 @@ from eq_layer.response_experiment import (  # noqa: E402
     FullEQPipeline,
     experiment_manifest,
     generate_pairs,
+    validate_experiment_cases,
 )
 
 
@@ -52,6 +53,11 @@ def main() -> int:
     parser.add_argument("--git-commit", default=None)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument(
+        "--final",
+        action="store_true",
+        help="Enforce final-run held-out/leakage/sample-size checks before generation.",
+    )
+    parser.add_argument(
         "--allow-development-cases",
         action="store_true",
         help="Pilot/debug only. Do not use for a final claim.",
@@ -71,6 +77,10 @@ def main() -> int:
         )
 
     cases = load_jsonl(cases_path)
+    preflight = validate_experiment_cases(cases, final=args.final)
+    if not preflight["ok"]:
+        parser.error("A/B case preflight failed: " + " | ".join(preflight["errors"]))
+
     if args.limit is not None:
         if args.limit < 1:
             parser.error("--limit must be >= 1")
@@ -107,6 +117,8 @@ def main() -> int:
         git_commit=args.git_commit,
     )
     manifest["development_cases_allowed"] = args.allow_development_cases
+    manifest["final_mode"] = args.final
+    manifest["case_preflight"] = preflight
     manifest["limit"] = args.limit
 
     with open(args.manifest, "w", encoding="utf-8") as fh:
