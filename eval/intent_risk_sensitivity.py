@@ -19,8 +19,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from eq_layer.intent_belief import DECISIONS, INTENT_LABELS, LOSS_MATRIX
 
