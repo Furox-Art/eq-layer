@@ -1,4 +1,5 @@
 from .affect import AffectAdapter, HeuristicAffect, load_cases
+from .auditor import AuditContext, AuditIssue, ResponseAudit, ResponseAuditor, audit_from_generation_metadata
 from .actions import FactoredAction, RealizationControls, compose_action
 from .intent import HeuristicIntent, IntentAdapter, IntentState
 from .intent_belief import IntentBelief, IntentRiskDecision, decide_intent_action, expected_loss
@@ -14,6 +15,11 @@ from .tracker import AnnotationStanceResolver, ConversationTracker, StanceDecisi
 __all__ = [
     "AffectAdapter",
     "AffectState",
+    "audit_from_generation_metadata",
+    "ResponseAuditor",
+    "ResponseAudit",
+    "AuditIssue",
+    "AuditContext",
     "compose_action",
     "RealizationControls",
     "FactoredAction",
