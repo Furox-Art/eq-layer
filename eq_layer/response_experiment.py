@@ -299,7 +299,7 @@ def generate_pairs(
 
     try:
         for case in cases:
-                case_id = str(case["id"])
+            case_id = str(case["id"])
             if case_id in seen:
                 raise ValueError(f"Duplicate experiment case id: {case_id}")
             seen.add(case_id)
@@ -344,11 +344,10 @@ def generate_pairs(
                     },
                 }
             )
-
     finally:
         model.close()
-    return output
 
+    return output
 
 def experiment_manifest(
     *,
