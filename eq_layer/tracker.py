@@ -3,6 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import Protocol
 
+from .interaction import (
+    InteractionQualityState,
+    RepairState,
+    infer_interaction_quality,
+    infer_repair_state,
+)
 from .policies import AffectState
 from .trained_subtext import SubtextDecision, TrainedSubtext
 
@@ -56,6 +62,8 @@ class TrackingResult:
     state: AffectState
     subtext: SubtextDecision
     stance: StanceDecision
+    repair: RepairState
+    interaction_quality: InteractionQualityState
 
 
 @dataclass
@@ -80,9 +88,17 @@ class ConversationTracker:
         )
         subtext = self.subtext.infer(messages, base, annotated=annotated)
         stance = self.stance.resolve(messages, annotated=annotated)
+        repair = infer_repair_state(messages)
+        interaction_quality = infer_interaction_quality(messages)
         state = replace(
             base,
             subtext=subtext.label,
             stance=stance.label,
         )
-        return TrackingResult(state=state, subtext=subtext, stance=stance)
+        return TrackingResult(
+            state=state,
+            subtext=subtext,
+            stance=stance,
+            repair=repair,
+            interaction_quality=interaction_quality,
+        )
