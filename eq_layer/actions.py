@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 
 from .intent import IntentState
+from .interaction import InteractionQualityState, RepairState
 from .policies import Policy, Register
 
 
@@ -20,7 +21,7 @@ class RealizationControls:
 
 @dataclass(frozen=True)
 class FactoredAction:
-    """Inspectable response action compiled from intent and dialogue policy.
+    """Inspectable response action compiled from intent and dialogue state.
 
     task_move is driven primarily by the user's explicit goal.
     social_move and repair_move are driven by conversational state/policy.
@@ -77,7 +78,25 @@ REPAIR_MOVES = {
 }
 
 
-def _realization(policy: Policy, intent: IntentState | None) -> RealizationControls:
+def _repair_move(policy: Policy, repair: RepairState | None) -> str:
+    base = REPAIR_MOVES.get(policy.name, "none")
+    if repair is None or not repair.active:
+        return base
+    if repair.repeated:
+        return "stop_restatement_and_repair"
+    if base != "none":
+        return base
+    return "repair_targeted"
+
+
+def _realization(
+    policy: Policy,
+    intent: IntentState | None,
+    *,
+    repair_move: str,
+    repair: RepairState | None = None,
+    interaction_quality: InteractionQualityState | None = None,
+) -> RealizationControls:
     by_register = {
         Register.MIRROR: ("normal", "normal", "normal"),
         Register.VALIDATE_REDIRECT: ("normal", "high", "normal"),
@@ -98,11 +117,27 @@ def _realization(policy: Policy, intent: IntentState | None) -> RealizationContr
     if "direct" in constraints:
         directness = "high"
 
-    repair_move = REPAIR_MOVES.get(policy.name, "none")
+    # Interaction quality is not affect. Only a strong structural failure
+    # signal changes realization, and it does so conservatively.
+    if interaction_quality is not None and interaction_quality.current <= 0.55:
+        verbosity = "low"
+        directness = "high"
+        warmth = "low"
+
     question_budget = 1 if (
         repair_move in {"clarify_goal", "clarify_one"}
         or (intent is not None and intent.needs_clarification)
     ) else 0
+
+    no_guess = (
+        "no_guess" in constraints
+        or (intent is not None and intent.needs_clarification)
+    )
+
+    # An active correction identifies a repair target, but does not prove the
+    # user's factual stance. Do not promote it to user_right/user_wrong.
+    if repair is not None and repair.active and repair_move == "clarify_one":
+        no_guess = True
 
     return RealizationControls(
         verbosity=verbosity,
@@ -110,27 +145,43 @@ def _realization(policy: Policy, intent: IntentState | None) -> RealizationContr
         warmth=warmth,
         question_budget=question_budget,
         scope_limited="scope_limited" in constraints,
-        no_guess=(
-            "no_guess" in constraints
-            or (intent is not None and intent.needs_clarification)
-        ),
+        no_guess=no_guess,
     )
 
 
 def compose_action(
     policy: Policy,
     intent: IntentState | None = None,
+    *,
+    repair: RepairState | None = None,
+    interaction_quality: InteractionQualityState | None = None,
 ) -> FactoredAction:
-    """Compile one selected legacy policy into orthogonal response controls."""
+    """Compile policy + intent + dialogue-health state into orthogonal controls."""
 
     task_move = _task_move(intent, policy)
     if policy.name == "boundary":
         task_move = "set_boundary"
 
+    repair_move = _repair_move(policy, repair)
+    social_move = SOCIAL_MOVES.get(policy.name, "neutral")
+
+    if (
+        interaction_quality is not None
+        and interaction_quality.current <= 0.55
+        and social_move == "neutral"
+    ):
+        social_move = "low_warmth"
+
     return FactoredAction(
         task_move=task_move,
-        social_move=SOCIAL_MOVES.get(policy.name, "neutral"),
-        repair_move=REPAIR_MOVES.get(policy.name, "none"),
-        realization=_realization(policy, intent),
+        social_move=social_move,
+        repair_move=repair_move,
+        realization=_realization(
+            policy,
+            intent,
+            repair_move=repair_move,
+            repair=repair,
+            interaction_quality=interaction_quality,
+        ),
         source_policy=policy.name,
     )
