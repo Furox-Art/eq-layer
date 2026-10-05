@@ -246,7 +246,11 @@ class TrainedSubtext:
                 evidence=("empty_user_turn",),
             )
 
-        if self.structural._has(current, CORRECTION_MARKERS):
+        has_prior_assistant = any(
+            m.get("role") == "assistant" for m in messages[:-1]
+        )
+
+        if has_prior_assistant and self.structural._has(current, CORRECTION_MARKERS):
             return SubtextDecision(
                 label="correction",
                 confidence=1.0,
@@ -352,7 +356,11 @@ class TrainedSubtext:
 
         # Low-confidence learned signals fall back to the auditable structural
         # tracker instead of being converted into a confident subtext.
-        fallback = self.structural._subtext(user_turns, {})
+        fallback = self.structural._subtext(
+            user_turns,
+            {},
+            has_prior_assistant=has_prior_assistant,
+        )
         return SubtextDecision(
             label=fallback,
             confidence=max(signals.act_confidence, signals.emotion_confidence),
