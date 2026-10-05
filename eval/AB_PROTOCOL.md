@@ -111,10 +111,13 @@ python eval/ab_generate.py heldout.jsonl pairs.jsonl manifest.json \
 The model command receives JSON on stdin with:
 
 - `model_id`
-- `condition`
 - `seed`
 - `temperature`
 - `messages`
+
+The backend is intentionally **not** told whether a call belongs to the
+baseline or EQ arm. The arm assignment remains inside the experiment engine,
+so the backend cannot branch on a condition label.
 
 It must write either plain response text or JSON containing `text` or
 `response`.
