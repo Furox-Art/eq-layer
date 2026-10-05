@@ -141,7 +141,7 @@ def infer_repair_state(messages: list[dict]) -> RepairState:
     ):
         return RepairState(
             active=False,
-            kind="resolved_or_responded_repair",
+            kind="responded_repair",
             target_turn_index=assistant_index,
             correction_excerpt=str(messages[user_index].get("content", "")).strip()[:240],
             repeated=len(recent_events) >= 2,
