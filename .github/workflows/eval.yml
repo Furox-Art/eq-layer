@@ -22,3 +22,5 @@ jobs:
         run: python eval/run.py
       - name: Run trained intent evaluation
         run: python eval/intent_eval.py
+      - name: Run EmoBank affect evaluation
+        run: python eval/emobank_affect_eval.py
