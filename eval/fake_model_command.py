@@ -20,9 +20,9 @@ def main() -> int:
     response = {
         "text": (
             f"model={payload['model_id']} "
-            f"condition={payload['condition']} "
             f"seed={payload['seed']} "
             f"messages={len(messages)} "
+            f"system={int(bool(messages and messages[0].get('role') == 'system'))} "
             f"user={last_user}"
         )
     }
