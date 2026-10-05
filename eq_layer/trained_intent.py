@@ -72,15 +72,23 @@ class TrainedIntent:
     It is a learned classifier, not a claim of deep semantic understanding.
     """
 
-    confidence_threshold: float = 0.55
+    confidence_threshold: float = 0.40
+    margin_threshold: float = 0.08
     model: object | None = None
     training_examples: int = 0
     fallback: HeuristicIntent = field(default_factory=HeuristicIntent)
     name: str = "trained-tfidf-logreg"
 
     @classmethod
-    def from_bundled(cls, confidence_threshold: float = 0.55) -> "TrainedIntent":
-        adapter = cls(confidence_threshold=confidence_threshold)
+    def from_bundled(
+        cls,
+        confidence_threshold: float = 0.40,
+        margin_threshold: float = 0.08,
+    ) -> "TrainedIntent":
+        adapter = cls(
+            confidence_threshold=confidence_threshold,
+            margin_threshold=margin_threshold,
+        )
         adapter.fit(bundled_training_records())
         return adapter
 
@@ -88,9 +96,13 @@ class TrainedIntent:
     def from_jsonl(
         cls,
         path: str | Path,
-        confidence_threshold: float = 0.55,
+        confidence_threshold: float = 0.40,
+        margin_threshold: float = 0.08,
     ) -> "TrainedIntent":
-        adapter = cls(confidence_threshold=confidence_threshold)
+        adapter = cls(
+            confidence_threshold=confidence_threshold,
+            margin_threshold=margin_threshold,
+        )
         adapter.fit(load_jsonl_records(path))
         return adapter
 
@@ -128,11 +140,15 @@ class TrainedIntent:
 
         probabilities = self.model.predict_proba([current])[0]
         classes = self.model.classes_
-        best_index = int(probabilities.argmax())
+        ranking = probabilities.argsort()[::-1]
+        best_index = int(ranking[0])
+        second_index = int(ranking[1])
         predicted = str(classes[best_index])
         confidence = float(probabilities[best_index])
+        margin = confidence - float(probabilities[second_index])
 
-        kind = predicted if confidence >= self.confidence_threshold else "unknown"
+        decisive = confidence >= self.confidence_threshold and margin >= self.margin_threshold
+        kind = predicted if decisive else "unknown"
         explicit = kind in {"action_request", "status_check", "explanation", "question"}
         needs_clarification = kind == "unknown"
         response_mode = {
@@ -155,6 +171,7 @@ class TrainedIntent:
             evidence=(
                 f"trained_prediction:{predicted}",
                 f"probability:{confidence:.4f}",
+                f"margin:{margin:.4f}",
                 f"training_examples:{self.training_examples}",
             ),
         )
@@ -170,6 +187,7 @@ class TrainedIntent:
             {
                 "model": self.model,
                 "confidence_threshold": self.confidence_threshold,
+                "margin_threshold": self.margin_threshold,
                 "training_examples": self.training_examples,
             },
             path,
@@ -184,6 +202,7 @@ class TrainedIntent:
         payload = joblib.load(path)
         return cls(
             confidence_threshold=float(payload["confidence_threshold"]),
+            margin_threshold=float(payload.get("margin_threshold", 0.08)),
             model=payload["model"],
             training_examples=int(payload.get("training_examples", 0)),
         )
