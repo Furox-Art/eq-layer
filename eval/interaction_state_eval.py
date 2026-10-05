@@ -84,6 +84,20 @@ def main() -> int:
     if quality.repeated_failure_count != 1:
         raise AssertionError("Repeated repair did not increment failure count.")
 
+    english_correction = [
+        {"role": "assistant", "content": "You want AMC Mercado 24."},
+        {"role": "user", "content": "I said AMC Mountain 16."},
+    ]
+    if not infer_repair_state(english_correction).active:
+        raise AssertionError("Explicit English correction was not detected.")
+
+    english_nonrepair = [
+        {"role": "assistant", "content": "Genre means category."},
+        {"role": "user", "content": "What do you mean by genre?"},
+    ]
+    if infer_repair_state(english_nonrepair).active:
+        raise AssertionError("Ordinary English clarification was misclassified as repair.")
+
     # User self-correction must remain separate from correcting the assistant.
     self_correction = [
         {"role": "assistant", "content": "Tarih 14 Ekim."},
