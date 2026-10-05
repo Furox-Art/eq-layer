@@ -82,6 +82,78 @@ def validate_experiment_cases(cases: list[dict], *, final: bool = False) -> dict
         "ok": not errors,
     }
 
+
+def select_stratified_cases(cases: list[dict], limit: int) -> list[dict]:
+    """Select a deterministic, approximately balanced pilot across source strata.
+
+    Strata are read from case["source"]["stratum"]. Selection preserves the
+    within-stratum source order and interleaves strata round-robin so a simple
+    prefix cannot accidentally become single-domain.
+    """
+    if limit < 1:
+        raise ValueError("Stratified limit must be >= 1.")
+
+    groups: dict[str, list[dict]] = {}
+    for case in cases:
+        source = case.get("source")
+        stratum = source.get("stratum") if isinstance(source, dict) else None
+        if not stratum:
+            raise ValueError(
+                "Stratified selection requires source.stratum on every case."
+            )
+        groups.setdefault(str(stratum), []).append(case)
+
+    if not groups:
+        raise ValueError("No strata available for stratified selection.")
+
+    strata = sorted(groups)
+    target = min(limit, len(cases))
+    base = target // len(strata)
+    remainder = target % len(strata)
+    quotas = {
+        stratum: base + (1 if index < remainder else 0)
+        for index, stratum in enumerate(strata)
+    }
+
+    # If a stratum is too small, redistribute its unused quota deterministically.
+    deficit = 0
+    for stratum in strata:
+        available = len(groups[stratum])
+        if quotas[stratum] > available:
+            deficit += quotas[stratum] - available
+            quotas[stratum] = available
+
+    while deficit > 0:
+        progressed = False
+        for stratum in strata:
+            if quotas[stratum] < len(groups[stratum]):
+                quotas[stratum] += 1
+                deficit -= 1
+                progressed = True
+                if deficit == 0:
+                    break
+        if not progressed:
+            break
+
+    selected: list[dict] = []
+    max_quota = max(quotas.values(), default=0)
+    for index in range(max_quota):
+        for stratum in strata:
+            if index < quotas[stratum]:
+                selected.append(groups[stratum][index])
+
+    return selected[:target]
+
+
+def stratum_counts(cases: list[dict]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for case in cases:
+        source = case.get("source")
+        stratum = source.get("stratum") if isinstance(source, dict) else None
+        key = str(stratum) if stratum else "unstratified"
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
 def stable_case_seed(global_seed: int, case_id: str) -> int:
     digest = hashlib.sha256(f"{global_seed}:{case_id}".encode("utf-8")).digest()
     return int.from_bytes(digest[:4], "big", signed=False)
