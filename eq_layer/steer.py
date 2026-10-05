@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from .actions import FactoredAction, compose_action
 from .intent import IntentState
 from .policies import Policy, Register
 
@@ -35,12 +36,18 @@ GENERIC_PHRASES = (
 class Steer:
     policy: Policy
     intent: IntentState | None = None
+    action: FactoredAction | None = None
     prefix: str = ""
     logit_bias: dict[int, float] = field(default_factory=dict)
 
     @classmethod
     def build(cls, policy: Policy, intent: IntentState | None = None) -> "Steer":
-        return cls(policy=policy, intent=intent, prefix=f"[{policy.register.value}] ")
+        return cls(
+            policy=policy,
+            intent=intent,
+            action=compose_action(policy, intent),
+            prefix=f"[{policy.register.value}] ",
+        )
 
     def system_instruction(self) -> str:
         """Return steering instructions without discarding conversation history."""
@@ -56,10 +63,31 @@ class Steer:
             if self.intent.needs_clarification:
                 intent_block += "\nDo not guess the missing referent. Ask exactly one targeted question."
 
+        action = self.action or compose_action(self.policy, self.intent)
+        controls = action.realization
+        action_block = (
+            "\nControl action:"
+            f"\n- task_move: {action.task_move}"
+            f"\n- social_move: {action.social_move}"
+            f"\n- repair_move: {action.repair_move}"
+            "\n- realization: "
+            f"verbosity={controls.verbosity}, "
+            f"directness={controls.directness}, "
+            f"warmth={controls.warmth}, "
+            f"question_budget={controls.question_budget}, "
+            f"scope_limited={str(controls.scope_limited).lower()}, "
+            f"no_guess={str(controls.no_guess).lower()}."
+            "\nThe task_move represents the user's goal and must not be replaced "
+            "by affective/social adaptation. social_move may shape interpersonal "
+            "delivery only. If repair_move is active and task completion would "
+            "require guessing, perform the repair first; otherwise preserve task "
+            "progress. Never exceed question_budget."
+        )
+
         return (
             f"Respond using the {self.policy.name} policy "
             f"({self.policy.register.value}). {self.policy.summary} "
-            f"Avoid: {avoid}.{intent_block}"
+            f"Avoid: {avoid}.{intent_block}{action_block}"
         )
 
     def apply_to_prompt(self, user_message: str) -> str:
