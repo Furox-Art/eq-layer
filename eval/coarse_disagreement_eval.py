@@ -84,6 +84,27 @@ def choose_threshold(expected: np.ndarray, probs: np.ndarray) -> tuple[float, fl
     return round(best_threshold, 2), round(best_f1, 4)
 
 
+def choose_high_precision_threshold(
+    expected: np.ndarray,
+    probs: np.ndarray,
+    target_precision: float = 0.60,
+) -> tuple[float, dict]:
+    candidates = []
+    for threshold in np.linspace(0.50, 0.99, 50):
+        predicted = (probs >= threshold).astype(int)
+        precision = float(precision_score(expected, predicted, zero_division=0))
+        recall = float(recall_score(expected, predicted, zero_division=0))
+        if precision >= target_precision:
+            candidates.append((recall, float(threshold), precision))
+
+    if not candidates:
+        threshold = 0.99
+    else:
+        _, threshold, _ = max(candidates)
+
+    return round(threshold, 2), metrics(expected, probs, threshold)
+
+
 def metrics(expected: np.ndarray, probs: np.ndarray, threshold: float) -> dict:
     predicted = (probs >= threshold).astype(int)
     majority = np.zeros_like(expected)
@@ -121,7 +142,11 @@ def main() -> int:
     dev_y = labels(dev)
     dev_p = probabilities(model, dev)
     threshold, dev_best_f1 = choose_threshold(dev_y, dev_p)
-    model.threshold = threshold
+    high_precision_threshold, dev_high_precision = choose_high_precision_threshold(
+        dev_y,
+        dev_p,
+        target_precision=0.60,
+    )
 
     test_y = labels(test)
     test_p = probabilities(model, test)
@@ -141,13 +166,20 @@ def main() -> int:
         "test_positive": int(test_y.sum()),
         "threshold_selected_on_dev": threshold,
         "dev_best_f1": dev_best_f1,
+        "high_precision_threshold_selected_on_dev": high_precision_threshold,
         "dev": metrics(dev_y, dev_p, threshold),
         "test": metrics(test_y, test_p, threshold),
+        "dev_high_precision": dev_high_precision,
+        "test_high_precision": metrics(
+            test_y,
+            test_p,
+            high_precision_threshold,
+        ),
     }
     print(json.dumps(report, indent=2))
 
     values = []
-    for split in ("dev", "test"):
+    for split in ("dev", "test", "dev_high_precision", "test_high_precision"):
         values.extend(report[split].values())
     if not all(math.isfinite(float(v)) for v in values):
         return 1
