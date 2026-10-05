@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from eq_layer.actions import compose_action  # noqa: E402
 from eq_layer.intent import IntentState  # noqa: E402
+from eq_layer.interaction import InteractionQualityState, RepairState  # noqa: E402
 from eq_layer.policies import REGISTRY  # noqa: E402
 from eq_layer.steer import Steer  # noqa: E402
 
@@ -84,6 +85,43 @@ def main() -> int:
         raise AssertionError("Clarification task has no question budget.")
     if not ambiguous.realization.no_guess:
         raise AssertionError("Clarification task must forbid guessing.")
+
+    # Repeated repair changes repair/social realization, not the user's task.
+    repeated_repair = RepairState(
+        active=True,
+        kind="user_corrects_assistant",
+        target_turn_index=0,
+        repeated=True,
+        recent_repair_count=2,
+        confidence=1.0,
+        evidence=("test",),
+    )
+    low_quality = InteractionQualityState(
+        current=0.55,
+        delta=-0.45,
+        repeated_failure_count=1,
+        unresolved_repair_count=1,
+        clarification_count=0,
+        evidence=("test",),
+    )
+    degraded = compose_action(
+        REGISTRY["execute_request"],
+        action_intent,
+        repair=repeated_repair,
+        interaction_quality=low_quality,
+    )
+    if degraded.task_move != "execute_request":
+        raise AssertionError("Repeated repair erased the explicit task.")
+    if degraded.repair_move != "stop_restatement_and_repair":
+        raise AssertionError(f"Repeated repair move missing: {degraded.repair_move}")
+    if degraded.social_move != "low_warmth":
+        raise AssertionError(f"Low interaction quality was ignored: {degraded.social_move}")
+    if (
+        degraded.realization.verbosity != "low"
+        or degraded.realization.directness != "high"
+        or degraded.realization.warmth != "low"
+    ):
+        raise AssertionError(f"Low-quality realization controls are wrong: {degraded}")
 
     # Boundary behavior is a task-level override, not merely a warm/cold style.
     boundary = compose_action(REGISTRY["boundary"], intent("statement"))
