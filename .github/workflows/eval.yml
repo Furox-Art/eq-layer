@@ -38,5 +38,7 @@ jobs:
         run: python eval/ab_harness_eval.py
       - name: Run response experiment engine smoke test
         run: python eval/response_experiment_eval.py
+      - name: Run intent belief Bayes-risk test
+        run: python eval/intent_belief_eval.py
       - name: Run trained intent evaluation
         run: python eval/intent_eval.py
