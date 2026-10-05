@@ -180,3 +180,123 @@ def score_blinded(rated_ballot: list[dict], key: dict) -> dict:
             "exact_sign_test_p_two_sided": summary.exact_p_two_sided,
         }
     return report
+
+
+def _decoded_vote(row: dict, key: dict, dimension: str) -> str:
+    case_id = str(row["id"])
+    if case_id not in key:
+        raise ValueError(f"Missing decode key for case: {case_id}")
+    ratings = row.get("ratings") or {}
+    vote = str(ratings.get(dimension, "")).strip().upper()
+    if vote == "TIE":
+        return "tie"
+    if vote not in {"A", "B"}:
+        raise ValueError(
+            f"{case_id}/{dimension}: expected A, B, or tie; got {vote!r}"
+        )
+    winner = key[case_id][vote]
+    if winner not in {"eq", "baseline"}:
+        raise ValueError(f"Invalid decode key target: {winner}")
+    return winner
+
+
+def _fleiss_kappa(case_votes: list[list[str]]) -> float | None:
+    if not case_votes:
+        return None
+    n_raters = len(case_votes[0])
+    if n_raters < 2 or any(len(votes) != n_raters for votes in case_votes):
+        return None
+
+    categories = ("eq", "baseline", "tie")
+    p_i = []
+    totals = {category: 0 for category in categories}
+
+    for votes in case_votes:
+        counts = {category: votes.count(category) for category in categories}
+        for category in categories:
+            totals[category] += counts[category]
+        agreement = (
+            sum(count * count for count in counts.values()) - n_raters
+        ) / (n_raters * (n_raters - 1))
+        p_i.append(agreement)
+
+    p_bar = sum(p_i) / len(p_i)
+    denom = len(case_votes) * n_raters
+    marginals = {
+        category: totals[category] / denom
+        for category in categories
+    }
+    p_e = sum(value * value for value in marginals.values())
+    if math.isclose(1.0 - p_e, 0.0):
+        return None
+    return round((p_bar - p_e) / (1.0 - p_e), 4)
+
+
+def score_multiple_blinded(
+    rated_ballots: dict[str, list[dict]],
+    key: dict,
+) -> dict:
+    """Aggregate multiple blinded raters without treating rater-votes as cases."""
+    if len(rated_ballots) < 2:
+        raise ValueError("Multi-rater scoring requires at least two raters.")
+
+    case_ids: list[str] | None = None
+    rows_by_rater: dict[str, dict[str, dict]] = {}
+
+    for rater_id, ballot in rated_ballots.items():
+        mapping = {str(row["id"]): row for row in ballot}
+        if len(mapping) != len(ballot):
+            raise ValueError(f"Duplicate case id in rater ballot: {rater_id}")
+        current_ids = sorted(mapping)
+        if case_ids is None:
+            case_ids = current_ids
+        elif current_ids != case_ids:
+            raise ValueError("All raters must score the same case ids.")
+        rows_by_rater[rater_id] = mapping
+
+    assert case_ids is not None
+    report = {
+        "design": "blind-pairwise-multi-rater-human-evaluation",
+        "n_raters": len(rated_ballots),
+        "n_cases": len(case_ids),
+        "dimensions": {},
+        "rater_reports": {},
+    }
+
+    for rater_id, ballot in rated_ballots.items():
+        report["rater_reports"][rater_id] = score_blinded(ballot, key)
+
+    for dimension in DIMENSIONS:
+        majority_wins = 0
+        majority_losses = 0
+        majority_ties = 0
+        per_case_votes: list[list[str]] = []
+
+        for case_id in case_ids:
+            votes = [
+                _decoded_vote(rows_by_rater[rater_id][case_id], key, dimension)
+                for rater_id in sorted(rows_by_rater)
+            ]
+            per_case_votes.append(votes)
+            eq_votes = votes.count("eq")
+            baseline_votes = votes.count("baseline")
+            if eq_votes > baseline_votes:
+                majority_wins += 1
+            elif baseline_votes > eq_votes:
+                majority_losses += 1
+            else:
+                majority_ties += 1
+
+        summary = summarize(majority_wins, majority_losses, majority_ties)
+        report["dimensions"][dimension] = {
+            "case_majority_eq_wins": summary.wins,
+            "case_majority_eq_losses": summary.losses,
+            "case_majority_ties": summary.ties,
+            "case_majority_eq_win_rate_non_tie": summary.win_rate_non_tie,
+            "wilson_95_low": summary.wilson_low,
+            "wilson_95_high": summary.wilson_high,
+            "exact_sign_test_p_two_sided": summary.exact_p_two_sided,
+            "fleiss_kappa": _fleiss_kappa(per_case_votes),
+        }
+
+    return report
