@@ -1,0 +1,35 @@
+name: Affect and Dialogue Benchmarks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "eq_layer/trained_affect.py"
+      - "eq_layer/trained_subtext.py"
+      - "eq_layer/affect.py"
+      - "eval/emobank_affect_eval.py"
+      - "eval/xdailydialog_subtext_eval.py"
+      - "tools/train_emobank_affect.py"
+      - "tools/train_xdailydialog_subtext.py"
+      - "pyproject.toml"
+      - ".github/workflows/affect-dialogue-benchmarks.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: eq-layer-affect-dialogue-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ML dependencies
+        run: python -m pip install -e ".[ml]"
+      - name: Run EmoBank affect evaluation
+        run: python eval/emobank_affect_eval.py
+      - name: Run XDailyDialog dialogue-signal evaluation
+        run: python eval/xdailydialog_subtext_eval.py
