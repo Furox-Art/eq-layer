@@ -74,3 +74,57 @@ EQ-Layer audits text-only dialogue-breakdown detection using the English DBDC3 r
 The upstream GitHub repository does not expose a repository license file that EQ-Layer can safely reinterpret for the dataset. The archive is therefore **not vendored**, and users must verify upstream terms independently.
 
 The verified text-only breakdown model is a **no-go** for routing: on the untouched revised eval split it reached ROC-AUC 0.5057. See `eval/results/dbdc3_breakdown_no_go.json`.
+
+
+## EmpatheticDialogues
+
+EQ-Layer uses the upstream EmpatheticDialogues **test split** only as one
+external held-out response-level evaluation stratum.
+
+- Upstream repository: `facebookresearch/EmpatheticDialogues`
+- Repository commit recorded by the builder:
+  `9649114c71e1af32189a3973b3598dc311297560`
+- Dataset archive:
+  `https://dl.fbaipublicfiles.com/parlai/empatheticdialogues/empatheticdialogues.tar.gz`
+- License: Creative Commons Attribution-NonCommercial 4.0 International
+  (CC BY-NC 4.0)
+- Planned held-out contribution: 60 conversation prefixes
+
+The dataset is **not vendored** into the MIT-licensed repository. The held-out
+builder downloads it at runtime, records the downloaded archive SHA-256, and
+uses only conversation prefixes ending in a user turn. The original human
+reference reply is excluded from model input.
+
+Recommended citation:
+- Rashkin, H. et al. (2019). *Towards Empathetic Open-domain Conversation
+  Models: A New Benchmark and Dataset*. ACL 2019.
+
+## Taskmaster-3
+
+EQ-Layer uses Taskmaster-3 as the task-oriented/repair portion of the external
+held-out response-level benchmark.
+
+- Upstream repository: `google-research-datasets/Taskmaster`
+- Pinned commit:
+  `d92cb6af3005f1dc09c39e75e7daf4a04905e00b`
+- Files used by the builder:
+  - `TM-3-2020/data/data_00.json`
+  - `TM-3-2020/data/data_01.json`
+- License statement in the upstream Taskmaster-3 README: CC BY 4.0
+- Planned held-out contribution:
+  - 30 repair/clarification user turns
+  - 30 general task user turns
+
+Taskmaster-3 explicitly contains repair and clarification phenomena such as
+users correcting previously understood entities. EQ-Layer does not use these
+examples to train its policy or subtext components; they are sampled only for
+the frozen external A/B evaluation set.
+
+The Taskmaster source text is not copied into the repository. The builder
+downloads pinned upstream files at runtime, records each file SHA-256, and the
+workflow stores the generated 120-case evaluation set as a GitHub Actions
+artifact rather than source code.
+
+Recommended citation:
+- Byrne, B. et al. Taskmaster series; see the Taskmaster-3 upstream README for
+  the dataset-specific citation and collection details.
