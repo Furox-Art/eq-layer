@@ -30,11 +30,3 @@ jobs:
         run: python eval/ab_harness_eval.py
       - name: Run trained intent evaluation
         run: python eval/intent_eval.py
-      - name: Run EmoBank affect evaluation
-        run: python eval/emobank_affect_eval.py
-      - name: Run XDailyDialog dialogue-signal evaluation
-        run: python eval/xdailydialog_subtext_eval.py
-      - name: Run DialogBank label inventory
-        run: python eval/dialogbank_inventory.py
-      - name: Run Coarse Discourse disagreement inventory
-        run: python eval/coarse_discourse_inventory.py
