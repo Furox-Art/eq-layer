@@ -475,6 +475,7 @@ def generate_pairs(
             output.append(
                 {
                     "id": case_id,
+                    "source": case.get("source"),
                     "context": messages,
                     "baseline": responses["baseline"],
                     "eq": responses["eq"],
