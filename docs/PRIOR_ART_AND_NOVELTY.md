@@ -436,7 +436,7 @@ steering literature.
 | Free-form intent routing | Yes | How May I Help You? | Learned intent |
 | Dialogue-act classification | Yes | classic SDS / GoDiS | Learned |
 | Explicit dialogue state | Yes | TRAINS, GoDiS | Yes |
-| Uncertainty/confidence | Yes | POMDP dialogue systems | Partial |
+| Uncertainty/confidence | Yes | POMDP dialogue systems | Learned posterior + one-step Bayes-risk routing implemented |
 | User model | Yes | TOOT, MATCH, relational agents | Partial |
 | Affect detection | Yes | affective computing, AutoTutor | Yes |
 | Affect changes policy | Yes | Holzapfel, AutoTutor, Bui | Yes |
@@ -551,26 +551,26 @@ Implemented in:
 - `eval/interaction_state_eval.py`
 - `eval/factored_action_eval.py`
 
-### D. Move from confidence threshold to belief state
+### D. Intent belief state + Bayes-risk routing — IMPLEMENTED
 
-Instead of:
+The learned intent adapter now preserves a posterior over all supported intent
+classes instead of collapsing uncertainty to one confidence score. A transparent
+one-step Bayes-risk router compares the expected interaction cost of each
+response move with clarification and selects the lowest-risk option.
 
-```text
-intent = status_check
-confidence = .61
-```
+This is POMDP-inspired uncertainty handling, not a full POMDP. EQ-Layer does
+not currently learn a transition model or long-horizon value function. The
+current decision-cost table is hand-specified and auditable; calibration and
+sensitivity analysis remain open scientific work.
 
-prefer:
+Implemented in:
+- `eq_layer/intent_belief.py`
+- `eq_layer/trained_intent.py`
+- `eq_layer/intent.py`
+- `eval/intent_belief_eval.py`
 
-```text
-intent_belief:
-  status_check: .61
-  question: .27
-  explanation: .08
-  other: .04
-```
-
-Policy selection can then compare expected loss of acting versus asking.
+Legacy confidence/margin thresholds remain stored for compatibility and
+diagnostics, but they no longer determine learned intent routing.
 
 ### E. Separate short-term affect from long-term user model
 
