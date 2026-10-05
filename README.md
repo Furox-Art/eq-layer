@@ -18,6 +18,22 @@ So this repo does not retrain the model. It adds a layer:
 3. **Policy selection** — affect and intent jointly choose a response *move* (`mirror`, `direct`, `execute`, `repair`, `hold`, `boundary`, ...). Selection is a discrete decision, not a generation.
 4. **Steering** — the chosen policy plus the canonical request are injected into the decode path so the decision actually lands in the tokens.
 
+## Prior art and novelty boundary
+
+EQ-Layer does **not** claim that affect-aware dialogue policy, user modelling,
+repair, intent routing, or adaptive dialogue management are new. Those ideas
+have substantial pre-LLM precedent in TRAINS/grounding work, adaptive TOOT,
+RavenClaw, user-tailored generation, affect-sensitive AutoTutor, affective
+POMDP dialogue management, and related systems.
+
+The defensible research question is narrower: whether an explicit,
+model-agnostic control layer can improve a **fixed general-purpose language
+model** by separating intent, affect, conversational evidence, policy selection,
+and generation steering while keeping those intermediate decisions inspectable.
+
+See `docs/PRIOR_ART_AND_NOVELTY.md` for the historical map, claims to avoid,
+and architecture lessons carried forward into this project.
+
 ## Status
 
 Early. The harness runs; the numbers are development signals, not a real-world EQ benchmark.
