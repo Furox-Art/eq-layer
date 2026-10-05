@@ -1,0 +1,23 @@
+{
+  "benchmark": "DBDC3-revised-English-hard-breakdown",
+  "github_actions_run_id": 37361762335,
+  "archive_sha256": "736229795dc3732f8e6bb421f094dc820ef944fef9d9d320d4110ef992b60e85",
+  "source": "dbdc3_revised",
+  "official_dev_turns": 4124,
+  "official_eval_turns": 1998,
+  "official_dev_dialogues": 414,
+  "official_eval_dialogues": 200,
+  "dev_hard_breakdown": 663,
+  "eval_hard_breakdown": 490,
+  "threshold_selected_on_dev_calibration": 0.9999985038747942,
+  "test": {
+    "average_precision": 0.2555,
+    "roc_auc": 0.5057,
+    "f1": 0.0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "balanced_accuracy": 0.4997,
+    "positive_rate": 0.2452
+  },
+  "decision": "NO-GO for automatic correction/repair routing. On the untouched revised evaluation split the text-only model is effectively chance-level, so EQ-Layer must not infer correction from this model. Use explicit user correction markers or externally verified breakdown evidence instead."
+}
