@@ -4,6 +4,8 @@ import re
 from dataclasses import dataclass
 from typing import Protocol
 
+from .intent_belief import IntentBelief, IntentRiskDecision
+
 
 @dataclass(frozen=True)
 class IntentState:
@@ -17,6 +19,8 @@ class IntentState:
     needs_clarification: bool
     constraints: tuple[str, ...] = ()
     evidence: tuple[str, ...] = ()
+    belief: IntentBelief | None = None
+    risk_decision: IntentRiskDecision | None = None
 
 
 class IntentAdapter(Protocol):
