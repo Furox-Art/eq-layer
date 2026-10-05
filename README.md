@@ -15,9 +15,10 @@ So this repo does not retrain the model. It adds a layer:
 
 1. **Affect state** — `{valence, arousal, escalation_delta, stance, subtext}` as an explicit intermediate representation, tracked across turns. `escalation_delta` is the point: snapshot classification cannot see a trend.
 2. **Intent state** — `{kind, canonical_request, response_mode, confidence, constraints}` rewrites the request into an inspectable control signal without inventing missing details.
-3. **Policy selection** — affect and intent jointly choose a response-policy family (`mirror`, `direct`, `repair`, `hold`, `boundary`, ...). Selection is a discrete decision, not generation.
-4. **Factored action compilation** — the selected policy is split into orthogonal controls: `task_move`, `social_move`, `repair_move`, and `realization`. The task is driven primarily by user intent, so affective adaptation cannot silently replace what the user actually asked for.
-5. **Steering** — the factored action, source policy, and canonical request are injected into the decode path so the control decision actually lands in the tokens.
+3. **Conversation health state** — `repair` identifies observable user→assistant misalignment and its target; `interaction_quality` tracks structural conversation failure separately from emotion using current score, delta, repeated failures, unresolved repair, and clarification load.
+4. **Policy selection** — affect and intent jointly choose a response-policy family (`mirror`, `direct`, `repair`, `hold`, `boundary`, ...). Selection is a discrete decision, not generation.
+5. **Factored action compilation** — the selected policy is split into orthogonal controls: `task_move`, `social_move`, `repair_move`, and `realization`. The task is driven primarily by user intent, so affective adaptation cannot silently replace what the user actually asked for.
+6. **Steering** — the factored action, source policy, repair state, interaction quality, and canonical request are injected into the decode path so the control decision actually lands in the tokens.
 
 ## Prior art and novelty boundary
 
@@ -62,10 +63,20 @@ tracked = tracker.infer(messages)
 state = tracked.state
 intent = TrainedIntent.from_bundled().infer(messages)
 selection = Selector().select(state, intent)
-action = compose_action(selection.policy, intent)
+action = compose_action(
+    selection.policy,
+    intent,
+    repair=tracked.repair,
+    interaction_quality=tracked.interaction_quality,
+)
 print(selection.policy.name, action.to_dict())
 
-prompt = Steer.build(selection.policy, intent).apply_to_prompt(messages[-1]["content"])
+prompt = Steer.build(
+    selection.policy,
+    intent,
+    repair=tracked.repair,
+    interaction_quality=tracked.interaction_quality,
+).apply_to_prompt(messages[-1]["content"])
 ```
 
 Run the seeded cases. Exits non-zero on any mismatch or any policy that no
@@ -294,12 +305,13 @@ keywords genuinely cannot recover — exhaustion is the current example.
 eq_layer/
   policies.py      joint affect/intent policy taxonomy + selector
   actions.py       task/social/repair/realization factorization
+  interaction.py   structural repair lifecycle + interaction-quality state
   affect.py           affect-state tracker interface + zero-dependency structural fallback
   trained_affect.py   learned VAD regressor + multi-turn affect adapter
   trained_subtext.py     learned dialogue-act/emotion signals + conservative subtext derivation
   trained_disagreement.py experimental direct-disagreement model; verified no-go for routing
   trained_breakdown.py   experimental text-only breakdown model; verified no-go for routing
-  tracker.py             composes affect, subtext and stance into policy state
+  tracker.py             composes affect, subtext, stance, repair and interaction quality
   intent.py           intent state + zero-dependency fallback
   trained_intent.py   learned TF-IDF + logistic-regression adapter
   data/intent_train.jsonl  bundled training corpus
