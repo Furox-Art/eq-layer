@@ -54,7 +54,6 @@ REPAIR_RE = re.compile(
     r"not the|"
     r"that's wrong|"
     r"that is wrong|"
-    r"you mean|"
     r"didn't say|"
     r"did not say"
     r")\b",
