@@ -1,0 +1,50 @@
+name: Case
+description: Add a transcript where two policies seem equally right, or where the current behaviour is clearly wrong
+labels: [case, good-first-issue]
+body:
+  - type: textarea
+    id: transcript
+    attributes:
+      label: Transcript
+      description: Alternate user/assistant turns. Plain JSON, same shape as eval/cases.jsonl
+      placeholder: |
+        [
+          {"role": "user", "content": "..."},
+          {"role": "assistant", "content": "..."},
+          {"role": "user", "content": "..."}
+        ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: expectations
+    attributes:
+      label: What should happen, and why
+      description: If you are not sure which policy is right, say so. That ambiguity is the interesting part.
+    validations:
+      required: true
+
+  - type: input
+    id: concepts
+    attributes:
+      label: expected_concepts
+      description: Comma-separated words that a good response must contain
+    validations:
+      required: false
+
+  - type: dropdown
+    id: ambiguity
+    attributes:
+      label: Which policy is it, if any?
+      options:
+        - unclear — this is why I filed it
+        - mirror_specific
+        - validate_then_redirect
+        - direct_no_padding
+        - ask_one_question
+        - deflate_tension
+        - repair_hold_position
+        - hold
+        - boundary
+    validations:
+      required: true
