@@ -7,6 +7,9 @@ on:
     paths:
       - "eval/hf_model_server.py"
       - "eq_layer/response_experiment.py"
+      - "eq_layer/trained_intent.py"
+      - "eq_layer/intent_belief.py"
+      - "eq_layer/intent.py"
       - "eq_layer/tracker.py"
       - "eq_layer/steer.py"
       - "eq_layer/interaction.py"
