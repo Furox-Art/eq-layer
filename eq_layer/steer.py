@@ -42,7 +42,8 @@ class Steer:
     def build(cls, policy: Policy, intent: IntentState | None = None) -> "Steer":
         return cls(policy=policy, intent=intent, prefix=f"[{policy.register.value}] ")
 
-    def apply_to_prompt(self, user_message: str) -> str:
+    def system_instruction(self) -> str:
+        """Return steering instructions without discarding conversation history."""
         avoid = "; ".join(self.policy.avoid)
         intent_block = ""
         if self.intent is not None:
@@ -58,8 +59,11 @@ class Steer:
         return (
             f"Respond using the {self.policy.name} policy "
             f"({self.policy.register.value}). {self.policy.summary} "
-            f"Avoid: {avoid}.{intent_block}\n\nUser: {user_message}"
+            f"Avoid: {avoid}.{intent_block}"
         )
+
+    def apply_to_prompt(self, user_message: str) -> str:
+        return f"{self.system_instruction()}\n\nUser: {user_message}"
 
 
 def specificity_score(response: str, case: dict) -> float:
