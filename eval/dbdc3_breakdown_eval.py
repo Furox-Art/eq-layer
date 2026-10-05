@@ -20,6 +20,7 @@ from sklearn.metrics import (  # noqa: E402
     average_precision_score,
     balanced_accuracy_score,
     f1_score,
+    precision_recall_curve,
     precision_score,
     recall_score,
     roc_auc_score,
@@ -68,20 +69,19 @@ def choose_threshold(
     probs: np.ndarray,
     target_precision: float = 0.70,
 ) -> tuple[float, dict]:
+    precisions, recalls, thresholds = precision_recall_curve(expected, probs)
     candidates = []
-    for threshold in np.linspace(0.30, 0.99, 70):
-        predicted = (probs >= threshold).astype(int)
-        precision = float(precision_score(expected, predicted, zero_division=0))
-        recall = float(recall_score(expected, predicted, zero_division=0))
+    for idx, threshold in enumerate(thresholds):
+        precision = float(precisions[idx])
+        recall = float(recalls[idx])
         if precision >= target_precision:
             candidates.append((recall, float(threshold), precision))
 
     if not candidates:
-        threshold = 0.99
+        threshold = float(np.nextafter(float(probs.max()), np.inf))
     else:
         _, threshold, _ = max(candidates)
 
-    threshold = round(threshold, 2)
     return threshold, metrics(expected, probs, threshold)
 
 
