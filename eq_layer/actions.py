@@ -99,7 +99,10 @@ def _realization(policy: Policy, intent: IntentState | None) -> RealizationContr
         directness = "high"
 
     repair_move = REPAIR_MOVES.get(policy.name, "none")
-    question_budget = 1 if repair_move in {"clarify_goal", "clarify_one"} else 0
+    question_budget = 1 if (
+        repair_move in {"clarify_goal", "clarify_one"}
+        or (intent is not None and intent.needs_clarification)
+    ) else 0
 
     return RealizationControls(
         verbosity=verbosity,
