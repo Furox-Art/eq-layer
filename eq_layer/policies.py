@@ -61,6 +61,7 @@ class Policy:
     register: Register
     summary: str
     preconditions: tuple[str, ...]
+    priority: int = 0
     avoid: tuple[str, ...] = ()
     example_opener: str = ""
 
