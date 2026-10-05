@@ -287,6 +287,27 @@ class FullEQPipeline:
             "register": selection.policy.register.value,
             "intent_kind": intent.kind,
             "intent_confidence": intent.confidence,
+            "intent_belief": (
+                intent.belief.as_dict()
+                if intent.belief is not None
+                else None
+            ),
+            "intent_belief_entropy": (
+                intent.belief.normalized_entropy
+                if intent.belief is not None
+                else None
+            ),
+            "intent_risk_decision": (
+                {
+                    "action": intent.risk_decision.action,
+                    "selected_intent": intent.risk_decision.selected_intent,
+                    "expected_loss": intent.risk_decision.expected_loss,
+                    "losses": intent.risk_decision.losses_dict(),
+                    "rationale": intent.risk_decision.rationale,
+                }
+                if intent.risk_decision is not None
+                else None
+            ),
             "subtext": tracked.subtext.label,
             "subtext_evidence_level": tracked.subtext.evidence_level,
             "stance": tracked.stance.label,
