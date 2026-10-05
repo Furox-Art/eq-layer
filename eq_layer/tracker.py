@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import Protocol
 
 from .policies import AffectState
@@ -61,7 +61,7 @@ class ConversationTracker:
 
     affect: object
     subtext: TrainedSubtext
-    stance: StanceResolver = AnnotationStanceResolver()
+    stance: StanceResolver = field(default_factory=AnnotationStanceResolver)
 
     def infer(
         self,
