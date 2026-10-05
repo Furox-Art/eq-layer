@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 
 from .actions import FactoredAction, compose_action
 from .intent import IntentState
+from .interaction import InteractionQualityState, RepairState
 from .policies import Policy, Register
 
 # Cheap under human raters. A model that is not penalised for these will
@@ -37,15 +38,31 @@ class Steer:
     policy: Policy
     intent: IntentState | None = None
     action: FactoredAction | None = None
+    repair: RepairState | None = None
+    interaction_quality: InteractionQualityState | None = None
     prefix: str = ""
     logit_bias: dict[int, float] = field(default_factory=dict)
 
     @classmethod
-    def build(cls, policy: Policy, intent: IntentState | None = None) -> "Steer":
+    def build(
+        cls,
+        policy: Policy,
+        intent: IntentState | None = None,
+        *,
+        repair: RepairState | None = None,
+        interaction_quality: InteractionQualityState | None = None,
+    ) -> "Steer":
         return cls(
             policy=policy,
             intent=intent,
-            action=compose_action(policy, intent),
+            repair=repair,
+            interaction_quality=interaction_quality,
+            action=compose_action(
+                policy,
+                intent,
+                repair=repair,
+                interaction_quality=interaction_quality,
+            ),
             prefix=f"[{policy.register.value}] ",
         )
 
@@ -63,7 +80,12 @@ class Steer:
             if self.intent.needs_clarification:
                 intent_block += "\nDo not guess the missing referent. Ask exactly one targeted question."
 
-        action = self.action or compose_action(self.policy, self.intent)
+        action = self.action or compose_action(
+            self.policy,
+            self.intent,
+            repair=self.repair,
+            interaction_quality=self.interaction_quality,
+        )
         controls = action.realization
         action_block = (
             "\nControl action:"
@@ -84,10 +106,32 @@ class Steer:
             "progress. Never exceed question_budget."
         )
 
+        dialogue_state_block = ""
+        if self.repair is not None:
+            dialogue_state_block += (
+                "\nRepair state:"
+                f" active={str(self.repair.active).lower()},"
+                f" kind={self.repair.kind},"
+                f" repeated={str(self.repair.repeated).lower()},"
+                f" target_turn={self.repair.target_turn_index}."
+                "\nA repair signal identifies conversational misalignment only; "
+                "it does not establish that either side is factually correct."
+            )
+        if self.interaction_quality is not None:
+            dialogue_state_block += (
+                "\nInteraction quality:"
+                f" current={self.interaction_quality.current:.2f},"
+                f" delta={self.interaction_quality.delta:.2f},"
+                f" repeated_failure_count={self.interaction_quality.repeated_failure_count},"
+                f" unresolved_repair_count={self.interaction_quality.unresolved_repair_count},"
+                f" clarification_count={self.interaction_quality.clarification_count}."
+                "\nInteraction quality measures conversation health, not the user's emotion."
+            )
+
         return (
             f"Respond using the {self.policy.name} policy "
             f"({self.policy.register.value}). {self.policy.summary} "
-            f"Avoid: {avoid}.{intent_block}{action_block}"
+            f"Avoid: {avoid}.{intent_block}{action_block}{dialogue_state_block}"
         )
 
     def apply_to_prompt(self, user_message: str) -> str:
