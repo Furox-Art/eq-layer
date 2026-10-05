@@ -9,6 +9,7 @@ from collections import Counter
 from dataclasses import dataclass
 
 DBDC3_URL = "https://dbd-challenge.github.io/dbdc3/data/DBDC3.zip"
+DBDC3_ARCHIVE_SHA256 = "736229795dc3732f8e6bb421f094dc820ef944fef9d9d320d4110ef992b60e85"
 
 
 @dataclass(frozen=True)
