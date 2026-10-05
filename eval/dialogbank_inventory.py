@@ -13,7 +13,12 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from eq_layer.dialogbank_iso import inventory, load_dialogbank_english  # noqa: E402
+from eq_layer.dialogbank_iso import (  # noqa: E402
+    discover_diaml_urls,
+    fetch_text,
+    inventory,
+    parse_diaml,
+)
 
 
 TARGETS = (
@@ -26,8 +31,16 @@ TARGETS = (
 
 
 def main() -> int:
-    examples = load_dialogbank_english()
+    examples = []
+    failures = []
+    for url in discover_diaml_urls():
+        try:
+            examples.extend(parse_diaml(fetch_text(url), url))
+        except Exception as exc:
+            failures.append({"url": url, "error": f"{type(exc).__name__}: {exc}"})
+
     report = inventory(examples)
+    report["parse_failures"] = failures
     report["target_counts"] = {
         target: report["functions"].get(target, 0)
         for target in TARGETS
@@ -35,6 +48,8 @@ def main() -> int:
     print(json.dumps(report, indent=2))
 
     if report["dialogues"] < 5 or report["examples"] < 100:
+        return 1
+    if len(failures) >= max(3, report["dialogues"]):
         return 1
     return 0
 
