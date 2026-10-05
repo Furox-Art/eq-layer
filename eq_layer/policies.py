@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from .intent import IntentState
+
 
 class Register(Enum):
     MIRROR = "mirror"
@@ -69,22 +71,27 @@ class Policy:
         never silently change what a looser one does."""
         return len(self.preconditions)
 
-    def applies(self, state: AffectState) -> bool:
-        return all(PREDICATES[name](state) for name in self.preconditions)
+    def applies(self, state: AffectState, intent: IntentState | None = None) -> bool:
+        return all(PREDICATES[name](state, intent) for name in self.preconditions)
 
 
 PREDICATES = {
-    "any": lambda s: True,
-    "escalating": lambda s: s.escalating,
-    "escalating_past_n": lambda s: s.escalating_past_n,
-    "not_escalating": lambda s: not s.escalating,
-    "not_escalating_past_n": lambda s: not s.escalating_past_n,
-    "user_is_right": lambda s: s.user_is_right,
-    "user_is_wrong": lambda s: s.user_is_wrong,
-    "stance_unknown": lambda s: s.stance_unknown,
-    "low_arousal": lambda s: s.arousal < 0.4,
-    "high_arousal": lambda s: s.arousal >= 0.5,
-    "high_arousal_run": lambda s: len(s.history) >= 2 and all(x.arousal >= 0.5 for x in s.history[-2:]),
+    "any": lambda s, i: True,
+    "escalating": lambda s, i: s.escalating,
+    "escalating_past_n": lambda s, i: s.escalating_past_n,
+    "not_escalating": lambda s, i: not s.escalating,
+    "not_escalating_past_n": lambda s, i: not s.escalating_past_n,
+    "user_is_right": lambda s, i: s.user_is_right,
+    "user_is_wrong": lambda s, i: s.user_is_wrong,
+    "stance_unknown": lambda s, i: s.stance_unknown,
+    "low_arousal": lambda s, i: s.arousal < 0.4,
+    "high_arousal": lambda s, i: s.arousal >= 0.5,
+    "high_arousal_run": lambda s, i: len(s.history) >= 2 and all(
+        x.arousal >= 0.5 for x in s.history[-2:]
+    ),
+    "not_high_arousal_run": lambda s, i: not (
+        len(s.history) >= 2 and all(x.arousal >= 0.5 for x in s.history[-2:])
+    ),
 }
 
 SUBTEXTS = (
@@ -100,12 +107,52 @@ SUBTEXTS = (
 )
 
 for _subtext in SUBTEXTS:
-    PREDICATES[f"subtext:{_subtext}"] = (lambda t: lambda s: s.subtext == t)(_subtext)
+    PREDICATES[f"subtext:{_subtext}"] = (
+        lambda t: lambda s, i: s.subtext == t
+    )(_subtext)
 
-PREDICATES["subtext_set:drained"] = lambda s: s.subtext in {"exhaustion", "resignation"}
+PREDICATES["subtext_set:drained"] = lambda s, i: s.subtext in {"exhaustion", "resignation"}
+PREDICATES["subtext_set:plain"] = lambda s, i: s.subtext in {"question", "statement"}
+PREDICATES["intent:explicit"] = lambda s, i: i is not None and i.explicit
+PREDICATES["intent:clarify"] = lambda s, i: i is not None and i.needs_clarification
+PREDICATES["intent:action_request"] = lambda s, i: i is not None and i.kind == "action_request"
+PREDICATES["intent:status_check"] = lambda s, i: i is not None and i.kind == "status_check"
+PREDICATES["intent:explanation"] = lambda s, i: i is not None and i.kind == "explanation"
 
 
 POLICIES: tuple[Policy, ...] = (
+    Policy(
+        name="execute_request",
+        register=Register.DIRECT,
+        summary="Act on the explicit request first. Do not paraphrase it back instead of doing it.",
+        preconditions=("intent:action_request", "intent:explicit", "not_escalating_past_n", "not_high_arousal_run"),
+        avoid=("Restating the request as if that were progress.", "Inventing missing details."),
+        example_opener="İstenen işlemi yap ve sonucu doğrudan bildir.",
+    ),
+    Policy(
+        name="report_status",
+        register=Register.DIRECT,
+        summary="Check the current state and report the observed result, not a guess.",
+        preconditions=("intent:status_check", "intent:explicit", "not_escalating_past_n", "not_high_arousal_run"),
+        avoid=("Guessing the status.", "Repeating the plan instead of checking."),
+        example_opener="Güncel durum: kontrol edilen sonuç burada.",
+    ),
+    Policy(
+        name="explain_request",
+        register=Register.DIRECT,
+        summary="Explain the requested point directly, preserving the user's actual question.",
+        preconditions=("intent:explanation", "intent:explicit", "not_escalating_past_n", "not_high_arousal_run"),
+        avoid=("Turning an explanation request into emotional mirroring.",),
+        example_opener="Nedeni şu:",
+    ),
+    Policy(
+        name="clarify_request",
+        register=Register.ASK,
+        summary="The requested action is not identifiable. Ask one question instead of guessing.",
+        preconditions=("intent:clarify", "subtext_set:plain", "not_escalating", "not_escalating_past_n"),
+        avoid=("Guessing what an unresolved pronoun refers to.", "Question stacking."),
+        example_opener="Tam olarak hangi şeyi kastediyorsun?",
+    ),
     Policy(
         name="mirror_specific",
         register=Register.MIRROR,
@@ -195,6 +242,7 @@ REGISTRY: dict[str, Policy] = {p.name: p for p in POLICIES}
 class Selection:
     policy: Policy
     state: AffectState
+    intent: IntentState | None = None
     rationale: str = ""
     runner_up: tuple[str, ...] = ()
 
@@ -204,20 +252,21 @@ class Selector:
     overrides: dict[str, str] = field(default_factory=dict)
     default: str = "mirror_specific"
 
-    def select(self, state: AffectState) -> Selection:
+    def select(self, state: AffectState, intent: IntentState | None = None) -> Selection:
         forced = self.overrides.get(state.subtext)
         if forced:
-            return Selection(policy=REGISTRY[forced], state=state, rationale=f"override:{forced}")
+            return Selection(policy=REGISTRY[forced], state=state, intent=intent, rationale=f"override:{forced}")
 
-        applicable = [p for p in POLICIES if p.applies(state)]
+        applicable = [p for p in POLICIES if p.applies(state, intent)]
         if not applicable:
-            return Selection(policy=REGISTRY[self.default], state=state, rationale="default")
+            return Selection(policy=REGISTRY[self.default], state=state, intent=intent, rationale="default")
 
         best = max(p.specificity for p in applicable)
         winners = [p for p in applicable if p.specificity == best]
         return Selection(
             policy=winners[0],
             state=state,
+            intent=intent,
             rationale=f"specificity={best} matched={','.join(p.name for p in applicable)}",
             runner_up=tuple(p.name for p in applicable if p is not winners[0]),
         )
