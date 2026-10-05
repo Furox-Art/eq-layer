@@ -47,19 +47,16 @@ TASKMASTER_URLS = tuple(
 
 REPAIR_RE = re.compile(
     r"\b("
-    r"no[,. ]|"
     r"i said|"
     r"i meant|"
     r"meant to say|"
     r"not that|"
     r"not the|"
-    r"actually|"
     r"that's wrong|"
     r"that is wrong|"
     r"you mean|"
     r"didn't say|"
-    r"did not say|"
-    r"sorry[, ]+i"
+    r"did not say"
     r")\b",
     re.IGNORECASE,
 )
