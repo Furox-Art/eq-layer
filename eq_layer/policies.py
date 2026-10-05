@@ -262,12 +262,26 @@ class Selector:
         if not applicable:
             return Selection(policy=REGISTRY[self.default], state=state, intent=intent, rationale="default")
 
-        best = max(p.specificity for p in applicable)
-        winners = [p for p in applicable if p.specificity == best]
+        best_specificity = max(p.specificity for p in applicable)
+        specific = [p for p in applicable if p.specificity == best_specificity]
+        best_priority = max(p.priority for p in specific)
+        winners = [p for p in specific if p.priority == best_priority]
+
+        if len(winners) != 1:
+            names = ", ".join(sorted(p.name for p in winners))
+            raise ValueError(
+                "Ambiguous policy selection: equal specificity and priority "
+                f"for {names}. Assign an explicit priority or refine preconditions."
+            )
+
+        winner = winners[0]
         return Selection(
-            policy=winners[0],
+            policy=winner,
             state=state,
             intent=intent,
-            rationale=f"specificity={best} matched={','.join(p.name for p in applicable)}",
-            runner_up=tuple(p.name for p in applicable if p is not winners[0]),
+            rationale=(
+                f"specificity={best_specificity} priority={best_priority} "
+                f"matched={','.join(p.name for p in applicable)}"
+            ),
+            runner_up=tuple(p.name for p in applicable if p is not winner),
         )
