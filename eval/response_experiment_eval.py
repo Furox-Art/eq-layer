@@ -86,10 +86,10 @@ def main() -> int:
             raise AssertionError("Annotations unexpectedly entered the default experiment.")
         if sorted(generation["order"]) != ["baseline", "eq"]:
             raise AssertionError(f"Both arms were not generated: {generation['order']}")
-        if "condition=baseline" not in pair["baseline"]:
-            raise AssertionError("Baseline did not use baseline condition.")
-        if "condition=eq" not in pair["eq"]:
-            raise AssertionError("EQ response did not use EQ condition.")
+        if "system=0" not in pair["baseline"]:
+            raise AssertionError("Baseline unexpectedly received a system steering message.")
+        if "system=1" not in pair["eq"]:
+            raise AssertionError("EQ response did not receive its system steering message.")
         if "messages=3" in pair["baseline"] and pair["id"] == "heldout-001":
             raise AssertionError("Baseline unexpectedly received the EQ system message.")
         if pair["id"] == "heldout-001" and "messages=3" not in pair["eq"]:
