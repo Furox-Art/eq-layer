@@ -10,7 +10,12 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from eq_layer.ab_eval import DIMENSIONS, prepare_blinded, score_blinded  # noqa: E402
+from eq_layer.ab_eval import (  # noqa: E402
+    DIMENSIONS,
+    prepare_blinded,
+    score_blinded,
+    score_multiple_blinded,
+)
 
 
 def main() -> int:
@@ -45,6 +50,25 @@ def main() -> int:
         raise AssertionError(f"Unexpected decoded preference: {overall}")
     if overall["eq_win_rate_non_tie"] != 1.0:
         raise AssertionError(f"Unexpected win rate: {overall}")
+
+    # Multi-rater smoke: two identical raters should produce perfect agreement.
+    second = []
+    for row in ballot:
+        second.append(
+            {
+                **row,
+                "ratings": dict(row["ratings"]),
+            }
+        )
+    multi = score_multiple_blinded(
+        {"rater-1": ballot, "rater-2": second},
+        key,
+    )
+    multi_overall = multi["dimensions"]["overall"]
+    if multi_overall["case_majority_eq_wins"] != 2:
+        raise AssertionError(f"Unexpected multi-rater majority: {multi_overall}")
+    if multi_overall["fleiss_kappa"] != 1.0:
+        raise AssertionError(f"Unexpected Fleiss kappa: {multi_overall}")
 
     print("blind A/B harness: pass")
     return 0
