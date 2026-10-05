@@ -26,6 +26,8 @@ jobs:
         run: python eval/run.py
       - name: Run evidence-tier evaluation
         run: python eval/evidence_tier_eval.py
+      - name: Run blind A/B harness smoke test
+        run: python eval/ab_harness_eval.py
       - name: Run trained intent evaluation
         run: python eval/intent_eval.py
       - name: Run EmoBank affect evaluation
