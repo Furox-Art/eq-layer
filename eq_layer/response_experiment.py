@@ -5,7 +5,7 @@ import json
 import random
 import shlex
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
@@ -108,6 +108,8 @@ class CommandModel:
     model_id: str
     temperature: float = 0.0
     timeout_seconds: int = 120
+    persistent: bool = False
+    _process: subprocess.Popen | None = field(default=None, init=False, repr=False)
 
     @classmethod
     def from_shell(
@@ -117,6 +119,7 @@ class CommandModel:
         model_id: str,
         temperature: float = 0.0,
         timeout_seconds: int = 120,
+        persistent: bool = False,
     ) -> "CommandModel":
         parsed = tuple(shlex.split(command))
         if not parsed:
@@ -126,6 +129,7 @@ class CommandModel:
             model_id=model_id,
             temperature=temperature,
             timeout_seconds=timeout_seconds,
+            persistent=persistent,
         )
 
     def generate(
@@ -141,21 +145,59 @@ class CommandModel:
             "temperature": self.temperature,
             "messages": messages,
         }
-        completed = subprocess.run(
-            list(self.command),
-            input=json.dumps(payload, ensure_ascii=False),
-            text=True,
-            capture_output=True,
-            timeout=self.timeout_seconds,
-            check=False,
-        )
-        if completed.returncode != 0:
-            raise RuntimeError(
-                f"Model command failed ({completed.returncode}): "
-                f"{completed.stderr.strip()}"
+        if self.persistent:
+            raw = self._persistent_generate(payload)
+        else:
+            completed = subprocess.run(
+                list(self.command),
+                input=json.dumps(payload, ensure_ascii=False),
+                text=True,
+                capture_output=True,
+                timeout=self.timeout_seconds,
+                check=False,
+            )
+            if completed.returncode != 0:
+                raise RuntimeError(
+                    f"Model command failed ({completed.returncode}): "
+                    f"{completed.stderr.strip()}"
+                )
+            raw = completed.stdout.strip()
+
+        return self._decode_response(raw)
+
+    def _persistent_generate(self, payload: dict) -> str:
+        if self._process is None:
+            self._process = subprocess.Popen(
+                list(self.command),
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
             )
 
-        raw = completed.stdout.strip()
+        process = self._process
+        if process.stdin is None or process.stdout is None:
+            raise RuntimeError("Persistent model command pipes are unavailable.")
+        if process.poll() is not None:
+            stderr = process.stderr.read().strip() if process.stderr else ""
+            raise RuntimeError(
+                f"Persistent model command exited ({process.returncode}): {stderr}"
+            )
+
+        process.stdin.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        process.stdin.flush()
+        raw = process.stdout.readline().strip()
+        if not raw:
+            stderr = process.stderr.read().strip() if process.stderr else ""
+            raise RuntimeError(
+                "Persistent model command returned an empty response. "
+                f"stderr={stderr}"
+            )
+        return raw
+
+    @staticmethod
+    def _decode_response(raw: str) -> str:
         if not raw:
             raise RuntimeError("Model command returned an empty response.")
 
@@ -173,6 +215,23 @@ class CommandModel:
         raise RuntimeError(
             "Model command JSON must contain a non-empty 'text' or 'response'."
         )
+
+    def close(self) -> None:
+        if self._process is None:
+            return
+        process = self._process
+        self._process = None
+        if process.stdin is not None:
+            process.stdin.close()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
 
 
 @dataclass
@@ -238,53 +297,56 @@ def generate_pairs(
     output: list[dict] = []
     seen: set[str] = set()
 
-    for case in cases:
-        case_id = str(case["id"])
-        if case_id in seen:
-            raise ValueError(f"Duplicate experiment case id: {case_id}")
-        seen.add(case_id)
+    try:
+        for case in cases:
+                case_id = str(case["id"])
+            if case_id in seen:
+                raise ValueError(f"Duplicate experiment case id: {case_id}")
+            seen.add(case_id)
 
-        messages = list(case.get("transcript") or case.get("context") or [])
-        if not messages:
-            raise ValueError(f"Experiment case has no transcript/context: {case_id}")
+            messages = list(case.get("transcript") or case.get("context") or [])
+            if not messages:
+                raise ValueError(f"Experiment case has no transcript/context: {case_id}")
 
-        annotated = case.get("annotated") if allow_annotations else None
-        eq_messages, eq_meta = pipeline.steer_messages(
-            messages,
-            annotated=annotated,
-        )
-
-        pair_seed = stable_case_seed(seed, case_id)
-        conditions = ["baseline", "eq"]
-        rng.shuffle(conditions)
-        responses: dict[str, str] = {}
-
-        for condition in conditions:
-            condition_messages = messages if condition == "baseline" else eq_messages
-            responses[condition] = model.generate(
-                condition_messages,
-                seed=pair_seed,
-                condition=condition,
+            annotated = case.get("annotated") if allow_annotations else None
+            eq_messages, eq_meta = pipeline.steer_messages(
+                messages,
+                annotated=annotated,
             )
 
-        output.append(
-            {
-                "id": case_id,
-                "context": messages,
-                "baseline": responses["baseline"],
-                "eq": responses["eq"],
-                "generation": {
-                    "model_id": model.model_id,
-                    "temperature": model.temperature,
-                    "pair_seed": pair_seed,
-                    "order": conditions,
-                    "same_model_both_arms": True,
-                    "annotations_used": bool(annotated),
-                    **eq_meta,
-                },
-            }
-        )
+            pair_seed = stable_case_seed(seed, case_id)
+            conditions = ["baseline", "eq"]
+            rng.shuffle(conditions)
+            responses: dict[str, str] = {}
 
+            for condition in conditions:
+                condition_messages = messages if condition == "baseline" else eq_messages
+                responses[condition] = model.generate(
+                    condition_messages,
+                    seed=pair_seed,
+                    condition=condition,
+                )
+
+            output.append(
+                {
+                    "id": case_id,
+                    "context": messages,
+                    "baseline": responses["baseline"],
+                    "eq": responses["eq"],
+                    "generation": {
+                        "model_id": model.model_id,
+                        "temperature": model.temperature,
+                        "pair_seed": pair_seed,
+                        "order": conditions,
+                        "same_model_both_arms": True,
+                        "annotations_used": bool(annotated),
+                        **eq_meta,
+                    },
+                }
+            )
+
+    finally:
+        model.close()
     return output
 
 
