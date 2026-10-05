@@ -50,6 +50,11 @@ def main() -> int:
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--timeout-seconds", type=int, default=120)
+    parser.add_argument(
+        "--persistent-model-command",
+        action="store_true",
+        help="Keep one model-command process alive and exchange newline-delimited JSON.",
+    )
     parser.add_argument("--git-commit", default=None)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument(
@@ -98,6 +103,7 @@ def main() -> int:
         model_id=args.model_id,
         temperature=args.temperature,
         timeout_seconds=args.timeout_seconds,
+        persistent=args.persistent_model_command,
     )
     pipeline = FullEQPipeline.load(
         affect_model=args.affect_model,
@@ -127,6 +133,7 @@ def main() -> int:
     manifest["final_mode"] = args.final
     manifest["case_preflight"] = preflight
     manifest["limit"] = args.limit
+    manifest["persistent_model_command"] = args.persistent_model_command
 
     with open(args.manifest, "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, ensure_ascii=False, indent=2)
