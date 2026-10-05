@@ -31,6 +31,8 @@ from eq_layer.response_experiment import (  # noqa: E402
     FullEQPipeline,
     experiment_manifest,
     generate_pairs,
+    select_stratified_cases,
+    stratum_counts,
     validate_experiment_cases,
 )
 
@@ -57,6 +59,7 @@ def main() -> int:
     )
     parser.add_argument("--git-commit", default=None)
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--stratified-limit", type=int, default=None)
     parser.add_argument(
         "--final",
         action="store_true",
