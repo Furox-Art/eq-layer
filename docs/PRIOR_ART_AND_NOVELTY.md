@@ -458,13 +458,21 @@ steering literature.
 
 These are the highest-value lessons from the historical literature.
 
-### A. Replace monolithic policy with factored action
+### A. Factored action architecture — IMPLEMENTED
 
-Current:
-`state -> one policy label`
+EQ-Layer now compiles the selected policy into:
 
-Better:
-`state -> task_move + social_move + repair_move + realization_controls`
+`state + intent -> task_move + social_move + repair_move + realization_controls`
+
+The legacy policy selector remains for backward-compatible routing, but it no
+longer carries the full response decision by itself. `task_move` is derived
+primarily from explicit user intent, while social and repair behavior are
+compiled separately. This prevents affective adaptation from silently replacing
+the user's task.
+
+Implemented in:
+- `eq_layer/actions.py`
+- `eval/factored_action_eval.py`
 
 Example:
 
@@ -477,8 +485,9 @@ directness     = high
 clarification  = false
 ```
 
-This is closer to the factorization lessons from RavenClaw and affective
-POMDP work and prevents "emotion policy" from replacing the user's task.
+This carries forward the factorization lessons from RavenClaw and affective
+POMDP work and explicitly prevents "emotion policy" from replacing the user's
+task. Core CI enforces this orthogonality.
 
 ### B. Add Interaction Quality as a separate variable
 
