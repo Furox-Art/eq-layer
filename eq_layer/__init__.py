@@ -1,4 +1,5 @@
 from .affect import AffectAdapter, HeuristicAffect, load_cases
+from .actions import FactoredAction, RealizationControls, compose_action
 from .intent import HeuristicIntent, IntentAdapter, IntentState
 from .policies import POLICIES, REGISTRY, SUBTEXTS, AffectState, Policy, Register, Selector
 from .response_experiment import CommandModel, FullEQPipeline, generate_pairs, validate_experiment_cases
@@ -11,6 +12,9 @@ from .tracker import AnnotationStanceResolver, ConversationTracker, StanceDecisi
 __all__ = [
     "AffectAdapter",
     "AffectState",
+    "compose_action",
+    "RealizationControls",
+    "FactoredAction",
     "HeuristicAffect",
     "HeuristicIntent",
     "IntentAdapter",
