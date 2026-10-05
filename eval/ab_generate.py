@@ -147,6 +147,8 @@ def main() -> int:
     manifest["final_mode"] = args.final
     manifest["case_preflight"] = preflight
     manifest["limit"] = args.limit
+    manifest["stratified_limit"] = args.stratified_limit
+    manifest["selected_strata"] = stratum_counts(cases)
     manifest["persistent_model_command"] = args.persistent_model_command
 
     with open(args.manifest, "w", encoding="utf-8") as fh:
