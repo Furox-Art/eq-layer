@@ -338,7 +338,12 @@ class FullEQPipeline:
             turn_index=len(messages),
             annotated=annotated or {},
         )
-        intent = self.intent.infer(messages)
+        raw_intent = self.intent.infer(messages)
+        intent = self.intent.reconcile_with_dialogue_evidence(
+            raw_intent,
+            messages,
+            tracked.subtext.signals,
+        )
         selection = self.selector.select(tracked.state, intent)
         steer = Steer.build(
             selection.policy,
@@ -359,6 +364,23 @@ class FullEQPipeline:
             "register": selection.policy.register.value,
             "intent_kind": intent.kind,
             "intent_confidence": intent.confidence,
+            "intent_kind_raw": raw_intent.kind,
+            "intent_belief_raw": (
+                raw_intent.belief.as_dict()
+                if raw_intent.belief is not None
+                else None
+            ),
+            "intent_risk_decision_raw": (
+                {
+                    "action": raw_intent.risk_decision.action,
+                    "selected_intent": raw_intent.risk_decision.selected_intent,
+                    "expected_loss": raw_intent.risk_decision.expected_loss,
+                    "losses": raw_intent.risk_decision.losses_dict(),
+                    "rationale": raw_intent.risk_decision.rationale,
+                }
+                if raw_intent.risk_decision is not None
+                else None
+            ),
             "intent_belief": (
                 intent.belief.as_dict()
                 if intent.belief is not None
