@@ -1,6 +1,7 @@
 from .affect import AffectAdapter, HeuristicAffect, load_cases
 from .actions import FactoredAction, RealizationControls, compose_action
 from .intent import HeuristicIntent, IntentAdapter, IntentState
+from .intent_belief import IntentBelief, IntentRiskDecision, decide_intent_action, expected_loss
 from .interaction import InteractionQualityState, RepairState, infer_interaction_quality, infer_repair_state
 from .policies import POLICIES, REGISTRY, SUBTEXTS, AffectState, Policy, Register, Selector
 from .response_experiment import CommandModel, FullEQPipeline, generate_pairs, validate_experiment_cases
@@ -20,6 +21,10 @@ __all__ = [
     "HeuristicIntent",
     "IntentAdapter",
     "IntentState",
+    "expected_loss",
+    "decide_intent_action",
+    "IntentRiskDecision",
+    "IntentBelief",
     "infer_repair_state",
     "infer_interaction_quality",
     "RepairState",
