@@ -15,8 +15,9 @@ So this repo does not retrain the model. It adds a layer:
 
 1. **Affect state** — `{valence, arousal, escalation_delta, stance, subtext}` as an explicit intermediate representation, tracked across turns. `escalation_delta` is the point: snapshot classification cannot see a trend.
 2. **Intent state** — `{kind, canonical_request, response_mode, confidence, constraints}` rewrites the request into an inspectable control signal without inventing missing details.
-3. **Policy selection** — affect and intent jointly choose a response *move* (`mirror`, `direct`, `execute`, `repair`, `hold`, `boundary`, ...). Selection is a discrete decision, not a generation.
-4. **Steering** — the chosen policy plus the canonical request are injected into the decode path so the decision actually lands in the tokens.
+3. **Policy selection** — affect and intent jointly choose a response-policy family (`mirror`, `direct`, `repair`, `hold`, `boundary`, ...). Selection is a discrete decision, not generation.
+4. **Factored action compilation** — the selected policy is split into orthogonal controls: `task_move`, `social_move`, `repair_move`, and `realization`. The task is driven primarily by user intent, so affective adaptation cannot silently replace what the user actually asked for.
+5. **Steering** — the factored action, source policy, and canonical request are injected into the decode path so the control decision actually lands in the tokens.
 
 ## Prior art and novelty boundary
 
@@ -49,7 +50,7 @@ pip install "eq-layer[ml]"
 ```
 
 ```python
-from eq_layer import ConversationTracker, Selector, Steer, TrainedAffect, TrainedIntent, TrainedSubtext
+from eq_layer import ConversationTracker, Selector, Steer, TrainedAffect, TrainedIntent, TrainedSubtext, compose_action
 
 messages = [
     {"role": "user", "content": "Randevumu üç kez değiştirdiler"},
@@ -61,7 +62,8 @@ tracked = tracker.infer(messages)
 state = tracked.state
 intent = TrainedIntent.from_bundled().infer(messages)
 selection = Selector().select(state, intent)
-print(selection.policy.name, intent.canonical_request)
+action = compose_action(selection.policy, intent)
+print(selection.policy.name, action.to_dict())
 
 prompt = Steer.build(selection.policy, intent).apply_to_prompt(messages[-1]["content"])
 ```
@@ -290,7 +292,8 @@ keywords genuinely cannot recover — exhaustion is the current example.
 
 ```
 eq_layer/
-  policies.py   joint affect/intent policy taxonomy + selector
+  policies.py      joint affect/intent policy taxonomy + selector
+  actions.py       task/social/repair/realization factorization
   affect.py           affect-state tracker interface + zero-dependency structural fallback
   trained_affect.py   learned VAD regressor + multi-turn affect adapter
   trained_subtext.py     learned dialogue-act/emotion signals + conservative subtext derivation
