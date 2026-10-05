@@ -85,14 +85,104 @@ def _repair_xml_text(xml_text: str) -> str:
     )
 
 
+
+def _parse_attrs(raw: str) -> dict[str, str]:
+    return {
+        key: html.unescape(value)
+        for key, value in re.findall(r'([A-Za-z_][\\w:.-]*)\\s*=\\s*"([^"]*)"', raw)
+    }
+
+
+def _plain_xml_text(raw: str) -> str:
+    without_tags = re.sub(r"<[^>]+>", "", raw)
+    return " ".join(html.unescape(without_tags).split())
+
+
+def _parse_diaml_legacy(xml_text: str, source_url: str) -> list[ISOExample]:
+    """Extract the annotation graph without requiring globally valid XML.
+
+    A few legacy DialogBank files contain malformed transcript characters.
+    The annotation tags themselves are regular enough to recover the fields
+    EQ-Layer needs. This fallback never rewrites or fabricates labels.
+    """
+    words: dict[str, str] = {}
+    for match in re.finditer(r"<w\\b([^>]*)>(.*?)</w>", xml_text, flags=re.DOTALL):
+        attrs = _parse_attrs(match.group(1))
+        wid = attrs.get("xml:id")
+        if wid:
+            words[wid] = _plain_xml_text(match.group(2))
+
+    verbal_segments: dict[str, list[str]] = {}
+    for match in re.finditer(
+        r"<spanGrp\\b([^>]*)>(.*?)</spanGrp>",
+        xml_text,
+        flags=re.DOTALL,
+    ):
+        attrs = _parse_attrs(match.group(1))
+        if attrs.get("type") != "functionalVerbalSegment":
+            continue
+        sid = attrs.get("xml:id")
+        if not sid:
+            continue
+        ids: list[str] = []
+        for span in re.finditer(r"<span\\b([^>]*)/?>", match.group(2)):
+            span_attrs = _parse_attrs(span.group(1))
+            start = _strip_ref(span_attrs.get("from"))
+            end = _strip_ref(span_attrs.get("to"))
+            if start:
+                ids.append(start)
+            if end and end != start:
+                ids.append(end)
+        verbal_segments[sid] = ids
+
+    functional_to_verbal: dict[str, str] = {}
+    for match in re.finditer(r"<fs\\b([^>]*)>(.*?)</fs>", xml_text, flags=re.DOTALL):
+        attrs = _parse_attrs(match.group(1))
+        if attrs.get("type") != "functionalSegment":
+            continue
+        fsid = attrs.get("xml:id")
+        if not fsid:
+            continue
+        for fmatch in re.finditer(r"<f\\b([^>]*)/?>", match.group(2)):
+            fattrs = _parse_attrs(fmatch.group(1))
+            if fattrs.get("name") == "verbalComponent":
+                functional_to_verbal[fsid] = _strip_ref(fattrs.get("fVal"))
+                break
+
+    examples: list[ISOExample] = []
+    for match in re.finditer(r"<dialogueAct\\b([^>]*)/?>", xml_text):
+        attrs = _parse_attrs(match.group(1))
+        function = attrs.get("communicativeFunction")
+        target = _strip_ref(attrs.get("target"))
+        if not function or not target:
+            continue
+        verbal = functional_to_verbal.get(target)
+        token_ids = verbal_segments.get(verbal or "", [])
+        text = " ".join(words.get(token, "") for token in token_ids).strip()
+        if not text:
+            continue
+        examples.append(
+            ISOExample(
+                dialogue=source_url,
+                text=text,
+                function=function,
+                dimension=attrs.get("dimension", ""),
+            )
+        )
+
+    if not examples:
+        raise ValueError(f"Legacy DialogBank parser recovered no dialogue acts: {source_url}")
+    return examples
+
+
 def parse_diaml(xml_text: str, source_url: str) -> list[ISOExample]:
     try:
         root = ET.fromstring(xml_text)
     except ET.ParseError:
         try:
             root = ET.fromstring(_repair_xml_text(xml_text))
-        except ET.ParseError as exc:
-            raise ValueError(f"Could not parse DialogBank DiAML: {source_url}") from exc
+        except ET.ParseError:
+            return _parse_diaml_legacy(xml_text, source_url)
 
     words: dict[str, str] = {}
     for elem in root.iter():
