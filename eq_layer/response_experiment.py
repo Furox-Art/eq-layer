@@ -268,11 +268,17 @@ class FullEQPipeline:
         )
         intent = self.intent.infer(messages)
         selection = self.selector.select(tracked.state, intent)
-        instruction = Steer.build(selection.policy, intent).system_instruction()
+        steer = Steer.build(selection.policy, intent)
+        instruction = steer.system_instruction()
 
         steered = [{"role": "system", "content": instruction}, *messages]
         metadata = {
             "policy": selection.policy.name,
+            "factored_action": (
+                steer.action.to_dict()
+                if steer.action is not None
+                else None
+            ),
             "register": selection.policy.register.value,
             "intent_kind": intent.kind,
             "intent_confidence": intent.confidence,
