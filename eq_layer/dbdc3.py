@@ -14,6 +14,7 @@ DBDC3_URL = "https://dbd-challenge.github.io/dbdc3/data/DBDC3.zip"
 @dataclass(frozen=True)
 class BreakdownTurn:
     source_file: str
+    split: str
     dialogue_id: str
     turn_index: int
     text: str
@@ -65,6 +66,31 @@ def _english_member(name: str) -> bool:
     return "/en/" in f"/{low}"
 
 
+def _effective_english_members(names: list[str]) -> list[str]:
+    english = [name for name in names if _english_member(name)]
+    revised = [
+        name
+        for name in english
+        if "/dbdc3_revised/en/" in name.lower().replace("\\", "/")
+    ]
+    if revised:
+        return revised
+    return [
+        name
+        for name in english
+        if "/dbdc3/en/" in name.lower().replace("\\", "/")
+    ]
+
+
+def _split_from_member(name: str) -> str:
+    low = name.lower().replace("\\", "/")
+    if "/en/dev/" in low:
+        return "dev"
+    if "/en/eval/" in low or "/en/test/" in low:
+        return "eval"
+    return "unknown"
+
+
 def _dialogue_id(payload: dict, member: str) -> str:
     for key in ("dialogue-id", "dialogue_id", "dialog-id", "id"):
         if payload.get(key) is not None:
@@ -76,7 +102,8 @@ def parse_english_turns(data: bytes) -> tuple[list[BreakdownTurn], dict]:
     turns: list[BreakdownTurn] = []
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         members = _iter_json_members(archive)
-        english = [name for name in members if _english_member(name)]
+        all_english = [name for name in members if _english_member(name)]
+        english = _effective_english_members(members)
 
         for member in english:
             with archive.open(member) as fh:
@@ -111,6 +138,7 @@ def parse_english_turns(data: bytes) -> tuple[list[BreakdownTurn], dict]:
                             turns.append(
                                 BreakdownTurn(
                                     source_file=member,
+                                    split=_split_from_member(member),
                                     dialogue_id=did,
                                     turn_index=int(turn.get("turn-index", position)),
                                     text=text,
@@ -124,8 +152,19 @@ def parse_english_turns(data: bytes) -> tuple[list[BreakdownTurn], dict]:
 
         meta = {
             "zip_members": len(members),
-            "english_json_members": len(english),
-            "english_json_names": english,
+            "all_english_json_members": len(all_english),
+            "effective_english_json_members": len(english),
+            "effective_source": (
+                "dbdc3_revised"
+                if any("/dbdc3_revised/en/" in name.lower().replace("\\", "/") for name in english)
+                else "dbdc3"
+            ),
+            "effective_dev_members": sum("/en/dev/" in name.lower().replace("\\", "/") for name in english),
+            "effective_eval_members": sum(
+                "/en/eval/" in name.lower().replace("\\", "/")
+                or "/en/test/" in name.lower().replace("\\", "/")
+                for name in english
+            ),
         }
     return turns, meta
 
