@@ -79,6 +79,10 @@ def main() -> int:
 
     if args.final and args.limit is not None:
         parser.error("--final cannot be combined with --limit")
+    if args.final and args.stratified_limit is not None:
+        parser.error("--final cannot be combined with --stratified-limit")
+    if args.limit is not None and args.stratified_limit is not None:
+        parser.error("--limit and --stratified-limit are mutually exclusive")
     if args.final and args.allow_development_cases:
         parser.error("--final cannot use --allow-development-cases")
     if args.final and args.allow_oracle_annotations:
@@ -100,6 +104,13 @@ def main() -> int:
         if args.limit < 1:
             parser.error("--limit must be >= 1")
         cases = cases[: args.limit]
+    elif args.stratified_limit is not None:
+        if args.stratified_limit < 1:
+            parser.error("--stratified-limit must be >= 1")
+        try:
+            cases = select_stratified_cases(cases, args.stratified_limit)
+        except ValueError as exc:
+            parser.error(str(exc))
 
     model = CommandModel.from_shell(
         args.model_command,
