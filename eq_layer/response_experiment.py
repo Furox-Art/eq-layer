@@ -268,7 +268,12 @@ class FullEQPipeline:
         )
         intent = self.intent.infer(messages)
         selection = self.selector.select(tracked.state, intent)
-        steer = Steer.build(selection.policy, intent)
+        steer = Steer.build(
+            selection.policy,
+            intent,
+            repair=tracked.repair,
+            interaction_quality=tracked.interaction_quality,
+        )
         instruction = steer.system_instruction()
 
         steered = [{"role": "system", "content": instruction}, *messages]
@@ -286,6 +291,25 @@ class FullEQPipeline:
             "subtext_evidence_level": tracked.subtext.evidence_level,
             "stance": tracked.stance.label,
             "stance_evidence_level": tracked.stance.evidence_level,
+            "repair": {
+                "active": tracked.repair.active,
+                "kind": tracked.repair.kind,
+                "target_turn_index": tracked.repair.target_turn_index,
+                "repeated": tracked.repair.repeated,
+                "recent_repair_count": tracked.repair.recent_repair_count,
+                "confidence": tracked.repair.confidence,
+                "evidence_level": tracked.repair.evidence_level,
+                "evidence": list(tracked.repair.evidence),
+            },
+            "interaction_quality": {
+                "current": tracked.interaction_quality.current,
+                "delta": tracked.interaction_quality.delta,
+                "repeated_failure_count": tracked.interaction_quality.repeated_failure_count,
+                "unresolved_repair_count": tracked.interaction_quality.unresolved_repair_count,
+                "clarification_count": tracked.interaction_quality.clarification_count,
+                "evidence_level": tracked.interaction_quality.evidence_level,
+                "evidence": list(tracked.interaction_quality.evidence),
+            },
             "selection_rationale": selection.rationale,
         }
         return steered, metadata
