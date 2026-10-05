@@ -182,6 +182,43 @@ directly supervise EQ-Layer's `challenge` or `exhaustion`; those remain
 `derived`. `StanceDecision` uses the same principle: factual
 `user_right/user_wrong` stays `unknown` unless externally verified.
 
+## Blind response-level evaluation
+
+Component metrics do not establish that EQ-Layer improves the final response.
+The repository therefore includes a condition-blind paired human-evaluation
+harness.
+
+Prepare pairs as JSONL:
+
+```json
+{"id":"case-001","context":[{"role":"user","content":"..."}],"baseline":"...","eq":"..."}
+```
+
+Blind and randomize them:
+
+```bash
+python eval/ab_prepare.py pairs.jsonl ballot.jsonl key.json --seed 42
+```
+
+Keep `key.json` away from raters. For every case, rate A/B/tie on:
+
+- `intent_fidelity`
+- `appropriateness`
+- `actionability`
+- `non_patronizing`
+- `overall`
+
+Then score:
+
+```bash
+python eval/ab_score.py rated_ballot.jsonl key.json
+```
+
+The scorer reports EQ wins/losses/ties, non-tie win rate, Wilson 95% confidence
+intervals, and an exact two-sided sign test. The harness does **not** manufacture
+a result: response generation and human ratings must come from a real
+pre-registered comparison.
+
 ## Selection
 
 Policies declare preconditions, and the most constrained applicable policy
