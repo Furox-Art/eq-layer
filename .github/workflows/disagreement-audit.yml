@@ -3,6 +3,12 @@ name: Direct Disagreement Audit
 on:
   push:
     branches: [main]
+    paths:
+      - "eq_layer/coarse_discourse.py"
+      - "eq_layer/trained_disagreement.py"
+      - "eval/coarse_discourse_inventory.py"
+      - "eval/coarse_disagreement_eval.py"
+      - ".github/workflows/disagreement-audit.yml"
   workflow_dispatch:
 
 concurrency:
