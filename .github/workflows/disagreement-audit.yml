@@ -17,5 +17,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install ML dependencies
+        run: python -m pip install -e ".[ml]"
       - name: Run Coarse Discourse inventory
         run: python eval/coarse_discourse_inventory.py
+      - name: Run grouped disagreement benchmark
+        run: python eval/coarse_disagreement_eval.py
