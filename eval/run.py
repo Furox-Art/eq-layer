@@ -12,6 +12,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from eq_layer.affect import HeuristicAffect, load_cases  # noqa: E402
+from eq_layer.intent import HeuristicIntent  # noqa: E402
 from eq_layer.policies import POLICIES, Selector  # noqa: E402
 from eq_layer.steer import score_case  # noqa: E402
 
@@ -21,6 +22,7 @@ CASES = os.path.join(os.path.dirname(__file__), "cases.jsonl")
 def main() -> int:
     cases = load_cases(CASES)
     adapter = HeuristicAffect()
+    intent_adapter = HeuristicIntent()
     selector = Selector()
 
     scores = []
@@ -33,13 +35,17 @@ def main() -> int:
     for case in cases:
         messages = case["transcript"]
         state = adapter.infer(messages, turn_index=len(messages), annotated=case.get("annotated"))
-        selection = selector.select(state)
+        intent = intent_adapter.infer(messages)
+        selection = selector.select(state, intent)
         selected_names.append(selection.policy.name)
 
         expected = case["expected_policy"]
-        ok = selection.policy.name == expected
+        expected_intent = case.get("expected_intent")
+        policy_ok = selection.policy.name == expected
+        intent_ok = expected_intent is None or intent.kind == expected_intent
+        ok = policy_ok and intent_ok
         if not ok:
-            mismatches.append((case["id"], expected, selection.policy.name))
+            mismatches.append((case["id"], expected, selection.policy.name, expected_intent, intent.kind))
 
         scores.append(
             score_case(
@@ -72,8 +78,9 @@ def main() -> int:
     if mismatches:
         print()
         print("mismatches:")
-        for case_id, expected, got in mismatches:
-            print(f"  {case_id}: expected {expected}, got {got}")
+        for case_id, expected, got, expected_intent, got_intent in mismatches:
+            extra = "" if expected_intent is None else f"; intent {expected_intent} -> {got_intent}"
+            print(f"  {case_id}: expected {expected}, got {got}{extra}")
 
     return 1 if mismatches or unselected else 0
 
