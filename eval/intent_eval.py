@@ -74,6 +74,7 @@ def main() -> int:
         "cv5_accuracy_mean": round(float(cv_scores.mean()), 4),
         "cv5_accuracy_min": round(float(cv_scores.min()), 4),
         "confidence_threshold": trained.confidence_threshold,
+        "margin_threshold": trained.margin_threshold,
     }
     print(json.dumps(report, indent=2))
 
