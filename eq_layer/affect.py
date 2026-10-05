@@ -129,11 +129,16 @@ class HeuristicAffect:
 
     # --- subtext ----------------------------------------------------------
 
-    def _subtext(self, user_turns: list[str], annotated: dict) -> str:
+    def _subtext(
+        self,
+        user_turns: list[str],
+        annotated: dict,
+        has_prior_assistant: bool = False,
+    ) -> str:
         current = user_turns[-1] if user_turns else ""
         low = current.lower()
 
-        if self._has(current, CORRECTION_MARKERS):
+        if has_prior_assistant and self._has(current, CORRECTION_MARKERS):
             return "correction"
         if self._has(current, DISCLOSURE_MARKERS):
             return "disclosure_request"
@@ -178,7 +183,13 @@ class HeuristicAffect:
             arousal=arousal,
             escalation_delta=round(arousal - self._arousal(previous), 3) if previous else 0.0,
             stance=self._stance(current, annotated),
-            subtext=self._subtext(user_turns, annotated),
+            subtext=self._subtext(
+                user_turns,
+                annotated,
+                has_prior_assistant=any(
+                    m.get("role") == "assistant" for m in messages[:-1]
+                ),
+            ),
             turn_index=turn_index,
             history=history,
         )
