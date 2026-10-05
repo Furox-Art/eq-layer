@@ -49,6 +49,28 @@ def main() -> int:
             ],
         ),
         dialogue(
+            "false-like-i-said",
+            [
+                ("assistant", "That movie sounds different."),
+                (
+                    "user",
+                    "Like I said, you get attached to the character.",
+                ),
+                ("assistant", "I see."),
+            ],
+        ),
+        dialogue(
+            "false-as-i-said",
+            [
+                ("assistant", "Are two tickets available?"),
+                (
+                    "user",
+                    "As I said earlier, my friend is coming with me.",
+                ),
+                ("assistant", "Okay."),
+            ],
+        ),
+        dialogue(
             "explicit-i-said",
             [
                 ("user", "I want to watch Dolittle."),
@@ -73,9 +95,20 @@ def main() -> int:
     )
     ids = {row["source_id"] for row in repair}
 
-    if any("false-not-the" in source_id for source_id in ids):
+    false_ids = {
+        "false-not-the",
+        "false-not-the-number",
+        "false-like-i-said",
+        "false-as-i-said",
+    }
+    leaked = [
+        source_id
+        for source_id in ids
+        if any(false_id in source_id for false_id in false_ids)
+    ]
+    if leaked:
         raise AssertionError(
-            f"Ordinary 'not the' language was sampled as repair: {sorted(ids)}"
+            f"Ordinary reminder/non-repair language was sampled as repair: {leaked}"
         )
     if not any("explicit-i-said" in source_id for source_id in ids):
         raise AssertionError(f"Explicit 'I said' correction missing: {sorted(ids)}")
