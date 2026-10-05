@@ -208,16 +208,26 @@ Keep `key.json` away from raters. For every case, rate A/B/tie on:
 - `non_patronizing`
 - `overall`
 
-Then score:
+Then score a single rater:
 
 ```bash
 python eval/ab_score.py rated_ballot.jsonl key.json
 ```
 
-The scorer reports EQ wins/losses/ties, non-tie win rate, Wilson 95% confidence
-intervals, and an exact two-sided sign test. The harness does **not** manufacture
-a result: response generation and human ratings must come from a real
-pre-registered comparison.
+Or score multiple raters on the same blinded cases:
+
+```bash
+python eval/ab_score_multi.py key.json rater1.jsonl rater2.jsonl rater3.jsonl
+```
+
+The single-rater scorer reports EQ wins/losses/ties, non-tie win rate, Wilson
+95% confidence intervals, and an exact two-sided sign test. The multi-rater
+scorer additionally aggregates **case-level majority preference** and reports
+**Fleiss' kappa** for inter-rater agreement; it does not treat every rater vote
+as an independent case.
+
+The harness does **not** manufacture a result: response generation and human
+ratings must come from a real pre-registered comparison.
 
 ## Selection
 
