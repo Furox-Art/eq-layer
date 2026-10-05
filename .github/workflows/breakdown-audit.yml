@@ -3,6 +3,12 @@ name: Breakdown Audit
 on:
   push:
     branches: [main]
+    paths:
+      - "eq_layer/dbdc3.py"
+      - "eq_layer/trained_breakdown.py"
+      - "eval/dbdc3_inventory.py"
+      - "eval/dbdc3_breakdown_eval.py"
+      - ".github/workflows/breakdown-audit.yml"
   workflow_dispatch:
 
 concurrency:
