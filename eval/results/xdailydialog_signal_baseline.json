@@ -1,0 +1,19 @@
+{
+  "benchmark": "XDailyDialog-English-official-files",
+  "upstream_repository": "liuzeming01/XDailyDialog",
+  "upstream_commit": "6e7ecf54c9f169215b4b8c18995c7aac74117127",
+  "github_actions_run_id": 37354122526,
+  "scope": "dialogue-act and basic-emotion supervision only; EQ-Layer subtext labels are derived downstream",
+  "train_examples": 83035,
+  "dev_examples": 8025,
+  "test_examples": 7716,
+  "dev": {
+    "act": {"accuracy": 0.7772, "macro_f1": 0.7298, "majority_accuracy": 0.3884},
+    "emotion": {"accuracy": 0.8756, "macro_f1": 0.4191, "majority_accuracy": 0.8815}
+  },
+  "test": {
+    "act": {"accuracy": 0.8025, "macro_f1": 0.7274, "majority_accuracy": 0.4557},
+    "emotion": {"accuracy": 0.8249, "macro_f1": 0.4310, "majority_accuracy": 0.8166}
+  },
+  "interpretation": "Dialogue-act classification is materially above majority baseline. Emotion classification has weak macro-F1 and only marginal test accuracy gain over majority; it is used as a supporting signal, not treated as reliable standalone affect understanding."
+}
