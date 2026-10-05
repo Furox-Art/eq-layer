@@ -99,6 +99,21 @@ The bundled data is small and synthetic. `eval/intent_eval.py` therefore
 reports both a fixed held-out score and five-fold cross-validation; neither is
 presented as evidence of production-level semantic understanding.
 
+## Verified development baselines
+
+The current CI-verified EmoBank regression baseline uses the official upstream
+train/dev/test split (8062 / 1000 / 1000). On the untouched test split:
+
+| dimension | MAE | train-mean baseline MAE | Spearman rho |
+| --- | ---: | ---: | ---: |
+| Valence | 0.2125 | 0.2449 | 0.5460 |
+| Arousal | 0.1782 | 0.1904 | 0.3120 |
+| Dominance | 0.1494 | 0.1563 | 0.2573 |
+
+The regressor beats the train-mean baseline on MAE for all three dimensions,
+but Arousal and Dominance rank correlations are still modest. The machine-readable
+record is `eval/results/emobank_affect_baseline.json`.
+
 ## Selection
 
 Policies declare preconditions, and the most constrained applicable policy
