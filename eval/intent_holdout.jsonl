@@ -1,0 +1,36 @@
+{"text":"README'yi düzenle","label":"action_request"}
+{"text":"Bu fonksiyonu yeniden yaz","label":"action_request"}
+{"text":"Testleri şimdi koştur","label":"action_request"}
+{"text":"Makaleye bunu ekle","label":"action_request"}
+{"text":"Please update the README","label":"action_request"}
+{"text":"Run the benchmark now","label":"action_request"}
+{"text":"Ne aşamadayız","label":"status_check"}
+{"text":"Kaç iş kaldı","label":"status_check"}
+{"text":"Şu an bitti mi","label":"status_check"}
+{"text":"CI ne durumda","label":"status_check"}
+{"text":"Is the CI done","label":"status_check"}
+{"text":"How many tasks remain","label":"status_check"}
+{"text":"Bunun mantığı nedir","label":"explanation"}
+{"text":"Niye böyle davranıyor","label":"explanation"}
+{"text":"Bu denklemi açıkla","label":"explanation"}
+{"text":"Nasıl karar veriyor","label":"explanation"}
+{"text":"Why is it behaving like this","label":"explanation"}
+{"text":"Explain this equation","label":"explanation"}
+{"text":"Kaç parametre var","label":"question"}
+{"text":"Hangi lisansı kullanıyor","label":"question"}
+{"text":"Bu sürüm stabil mi","label":"question"}
+{"text":"En son dosya hangisi","label":"question"}
+{"text":"How many parameters are there","label":"question"}
+{"text":"Which license does it use","label":"question"}
+{"text":"Bu sonuç oldukça ilginç","label":"statement"}
+{"text":"Dün veri setini güncelledim","label":"statement"}
+{"text":"Yeni yapı daha sade","label":"statement"}
+{"text":"Bugün workflow hata verdi","label":"statement"}
+{"text":"The new structure is simpler","label":"statement"}
+{"text":"The workflow failed today","label":"statement"}
+{"text":"Buna","label":"unknown"}
+{"text":"Şu şey","label":"unknown"}
+{"text":"O","label":"unknown"}
+{"text":"Diğeri","label":"unknown"}
+{"text":"That","label":"unknown"}
+{"text":"The other","label":"unknown"}
