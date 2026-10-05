@@ -33,12 +33,13 @@ pip install "eq-layer[ml]"
 ```
 
 ```python
-from eq_layer import HeuristicAffect, Selector, Steer, TrainedIntent
+from eq_layer import Selector, Steer, TrainedAffect, TrainedIntent
 
 messages = [
     {"role": "user", "content": "Randevumu üç kez değiştirdiler"},
 ]
-state = HeuristicAffect().infer(messages)
+affect = TrainedAffect.load("artifacts/emobank_affect.joblib")
+state = affect.infer(messages)
 intent = TrainedIntent.from_bundled().infer(messages)
 selection = Selector().select(state, intent)
 print(selection.policy.name, intent.canonical_request)
@@ -61,6 +62,17 @@ python eval/intent_eval.py
 
 It compares the learned adapter with the heuristic fallback and reports
 five-fold cross-validation on the bundled corpus.
+
+Train the affect regressor from the pinned official EmoBank release:
+
+```bash
+python tools/train_emobank_affect.py --output artifacts/emobank_affect.joblib
+python eval/emobank_affect_eval.py
+```
+
+EmoBank is not bundled into this repository. The training/evaluation path uses
+the upstream train/dev/test split and records its pinned commit and
+CC-BY-SA-4.0 provenance in `THIRD_PARTY_DATA.md`.
 
 ## Intent is a control signal, not mind-reading
 
@@ -112,7 +124,8 @@ keywords genuinely cannot recover — exhaustion is the current example.
 ```
 eq_layer/
   policies.py   joint affect/intent policy taxonomy + selector
-  affect.py     affect-state tracker interface + adapters
+  affect.py           affect-state tracker interface + zero-dependency structural fallback
+  trained_affect.py   learned VAD regressor + multi-turn affect adapter
   intent.py           intent state + zero-dependency fallback
   trained_intent.py   learned TF-IDF + logistic-regression adapter
   data/intent_train.jsonl  bundled training corpus
@@ -132,11 +145,16 @@ Three metrics, deliberately narrow:
 
 If genericness is not penalised, a model will score well by saying nothing in particular.
 
-## Affect detection is still the weak part
+## Affect is now partly learned
 
-The affect tracker is keywords, not a classifier. It is readable on purpose — when a
-signal fires you can see why without a gradient — but it is wrong in ways that
-matter, and the failures are instructive:
+`TrainedAffect` learns continuous Valence, Arousal and Dominance from EmoBank,
+then converts Valence to `[-1, 1]` and Arousal to `[0, 1]` for policy state.
+Multi-turn `escalation_delta` is computed from consecutive learned arousal
+predictions rather than keyword counts.
+
+This does **not** make the whole affect state learned. `subtext` and `stance`
+remain explicit structural/annotated signals, because EmoBank contains VAD
+ratings rather than dialogue-policy labels. The remaining limitations are:
 
 - **`escalating_past_n` excludes the current turn.** The question is whether
   the preceding turns were rising, so one polite message after three hostile
