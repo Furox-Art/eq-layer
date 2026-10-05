@@ -186,7 +186,27 @@ directly supervise EQ-Layer's `challenge` or `exhaustion`; those remain
 
 Component metrics do not establish that EQ-Layer improves the final response.
 The repository therefore includes a condition-blind paired human-evaluation
-harness.
+harness. The complete pre-registered protocol is in `eval/AB_PROTOCOL.md`.
+
+Generate paired responses with the **same base model** in both arms:
+
+```bash
+python eval/ab_generate.py heldout.jsonl pairs.jsonl manifest.json \
+  --model-command "python model_adapter.py" \
+  --model-id SAME_BASE_MODEL_VERSION \
+  --affect-model artifacts/emobank_affect.joblib \
+  --subtext-model artifacts/xdailydialog_subtext.joblib \
+  --temperature 0 \
+  --seed 42 \
+  --git-commit <eq-layer-commit>
+```
+
+The configured command receives JSON on stdin and returns either plain response
+text or JSON containing `text`/`response`. Secrets belong in environment
+variables, not command arguments. `eval/cases.jsonl` is rejected by default
+because it is a development set, and gold annotations are ignored unless an
+explicit oracle-analysis flag is supplied.
+
 
 Prepare pairs as JSONL:
 
@@ -264,9 +284,15 @@ eq_layer/
   intent.py           intent state + zero-dependency fallback
   trained_intent.py   learned TF-IDF + logistic-regression adapter
   data/intent_train.jsonl  bundled training corpus
-  steer.py            policy + intent → decode path, and the scorer
+  steer.py               policy + intent → decode path, and the scorer
+  response_experiment.py same-model baseline-vs-EQ generation engine
 eval/
-  cases.jsonl   seeded cases, including the hard distinctions
+  cases.jsonl          development cases, not final A/B evidence
+  AB_PROTOCOL.md       pre-registered response-level evaluation protocol
+  ab_generate.py       paired response generation
+  ab_prepare.py        A/B blinding
+  ab_score.py          single-rater scoring
+  ab_score_multi.py    multi-rater scoring
   run.py
 ```
 
