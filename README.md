@@ -130,6 +130,24 @@ The regressor beats the train-mean baseline on MAE for all three dimensions,
 but Arousal and Dominance rank correlations are still modest. The machine-readable
 record is `eval/results/emobank_affect_baseline.json`.
 
+### Dialogue-signal baseline
+
+The learned dialogue-signal tracker was verified on the pinned XDailyDialog
+English train/dev/test files (83035 / 8025 / 7716 utterances). On the untouched
+test file:
+
+| task | accuracy | macro-F1 | majority accuracy |
+| --- | ---: | ---: | ---: |
+| dialogue act | 0.8025 | 0.7274 | 0.4557 |
+| basic emotion | 0.8249 | 0.4310 | 0.8166 |
+
+The dialogue-act signal is substantially above the majority baseline. The
+emotion signal is much weaker: macro-F1 is only 0.431 and accuracy is only
+slightly above the majority baseline on test (and below it on dev). EQ-Layer
+therefore treats emotion as supporting evidence rather than standalone proof of
+subtext. The machine-readable result is
+`eval/results/xdailydialog_signal_baseline.json`.
+
 ## Selection
 
 Policies declare preconditions, and the most constrained applicable policy
@@ -218,8 +236,10 @@ The remaining limitations are:
   the one-word repeated question — the exact shape `escalating` exists to
   catch — silently never fires.
 
-Replacing this with a trained tracker is the obvious next step, and
-`AffectAdapter` is the seam for it.
+The remaining hard gap is direct supervision for higher-level dialogue states
+such as correction, exhaustion/resignation, and factual stance. The current
+tracker exposes where those labels are derived or externally supplied instead
+of hiding the distinction.
 
 ## Contributing
 
