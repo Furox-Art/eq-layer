@@ -20,20 +20,26 @@ So this repo does not retrain the model. It adds a layer:
 
 ## Status
 
-Early. The harness runs; the numbers are not yet trustworthy.
+Early. The harness runs; the numbers are development signals, not a real-world EQ benchmark.
 
 There is no standard benchmark for EQ. `eval/` is a first attempt at one, not a finished measurement. If you improve the scorer, that contribution matters as much as adding a policy.
 
 ## Quick start
 
+Install the learned intent tracker:
+
+```bash
+pip install "eq-layer[ml]"
+```
+
 ```python
-from eq_layer import HeuristicAffect, HeuristicIntent, Selector, Steer
+from eq_layer import HeuristicAffect, Selector, Steer, TrainedIntent
 
 messages = [
     {"role": "user", "content": "Randevumu üç kez değiştirdiler"},
 ]
 state = HeuristicAffect().infer(messages)
-intent = HeuristicIntent().infer(messages)
+intent = TrainedIntent.from_bundled().infer(messages)
 selection = Selector().select(state, intent)
 print(selection.policy.name, intent.canonical_request)
 
@@ -47,20 +53,39 @@ case can reach:
 python eval/run.py
 ```
 
+Run the intent benchmark separately:
+
+```bash
+python eval/intent_eval.py
+```
+
+It compares the learned adapter with the heuristic fallback and reports
+five-fold cross-validation on the bundled corpus.
+
 ## Intent is a control signal, not mind-reading
 
-The intent layer keeps a separate representation of what the user appears to
-want. It records the original request inside a canonical instruction, the
-response mode, confidence, and explicit constraints such as `brief`,
-`scope_limited`, and `no_guess`.
+The default intent path is now learned rather than keyword-selected.
+`TrainedIntent` fits a balanced logistic-regression classifier over combined
+word and character TF-IDF features. The bundled corpus currently contains
+Turkish and English examples for `action_request`, `status_check`,
+`explanation`, `question`, `statement`, and `unknown`.
 
-The rule is conservative: if the referent is unresolved, `needs_clarification`
-stays true and the selector chooses one targeted question. The layer must not
-turn "do that" into a guessed task just because a likely task exists.
+The classifier emits a probability. Predictions below the confidence threshold
+become `unknown` and request clarification instead of being silently promoted
+to a guessed task. Explicit constraints such as `brief`, `scope_limited`,
+and `no_guess` remain deterministic because they are control requirements,
+not semantic labels.
+
+`HeuristicIntent` remains available as a zero-dependency fallback. It is no
+longer the adapter used by the main evaluation harness.
 
 Affect can still override intent during sustained escalation. A clear action
 request should drive the response in a calm turn; it should not erase a
 multi-turn escalation signal.
+
+The bundled data is small and synthetic. `eval/intent_eval.py` therefore
+reports both a fixed held-out score and five-fold cross-validation; neither is
+presented as evidence of production-level semantic understanding.
 
 ## Selection
 
@@ -88,8 +113,10 @@ keywords genuinely cannot recover — exhaustion is the current example.
 eq_layer/
   policies.py   joint affect/intent policy taxonomy + selector
   affect.py     affect-state tracker interface + adapters
-  intent.py     intent canonicalisation + response contract
-  steer.py      policy + intent → decode path, and the scorer
+  intent.py           intent state + zero-dependency fallback
+  trained_intent.py   learned TF-IDF + logistic-regression adapter
+  data/intent_train.jsonl  bundled training corpus
+  steer.py            policy + intent → decode path, and the scorer
 eval/
   cases.jsonl   seeded cases, including the hard distinctions
   run.py
@@ -105,9 +132,9 @@ Three metrics, deliberately narrow:
 
 If genericness is not penalised, a model will score well by saying nothing in particular.
 
-## Detection is the weak part
+## Affect detection is still the weak part
 
-The tracker is keywords, not a classifier. It is readable on purpose — when a
+The affect tracker is keywords, not a classifier. It is readable on purpose — when a
 signal fires you can see why without a gradient — but it is wrong in ways that
 matter, and the failures are instructive:
 
