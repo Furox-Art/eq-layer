@@ -69,6 +69,11 @@ class Steer:
     def system_instruction(self) -> str:
         """Return steering instructions without discarding conversation history."""
         avoid = "; ".join(self.policy.avoid)
+        repair_has_replacement = bool(
+            self.repair is not None
+            and self.repair.active
+            and self.repair.replacement_explicit
+        )
         intent_block = ""
         if self.intent is not None:
             constraints = ", ".join(self.intent.constraints) or "none"
@@ -91,8 +96,14 @@ class Steer:
                     f"\nIntent routing decision: {self.intent.risk_decision.action}; "
                     f"expected_loss={self.intent.risk_decision.expected_loss:.3f}."
                 )
-            if self.intent.needs_clarification:
+            if self.intent.needs_clarification and not repair_has_replacement:
                 intent_block += "\nDo not guess the missing referent. Ask exactly one targeted question."
+            elif repair_has_replacement:
+                intent_block += (
+                    "\nThe latest turn is an explicit correction. Its supplied replacement "
+                    "takes precedence over latest-turn intent ambiguity for repair handling. "
+                    "Do not ask the user to repeat or reconfirm the corrected value."
+                )
 
         action = self.action or compose_action(
             self.policy,
@@ -127,10 +138,23 @@ class Steer:
                 f" active={str(self.repair.active).lower()},"
                 f" kind={self.repair.kind},"
                 f" repeated={str(self.repair.repeated).lower()},"
-                f" target_turn={self.repair.target_turn_index}."
+                f" target_turn={self.repair.target_turn_index},"
+                f" replacement_explicit={str(self.repair.replacement_explicit).lower()}."
                 "\nA repair signal identifies conversational misalignment only; "
                 "it does not establish that either side is factually correct."
             )
+            if self.repair.active and self.repair.replacement_explicit:
+                dialogue_state_block += (
+                    f'\nExplicit correction replacement: "{self.repair.replacement_excerpt}".'
+                    "\nApply this replacement to the prior task and continue from the corrected "
+                    "state. Do not ask the user to repeat or reconfirm it. A next-step question "
+                    "is allowed only if the corrected task itself genuinely requires one."
+                )
+            elif self.repair.active:
+                dialogue_state_block += (
+                    "\nThe user signalled a correction but did not supply an auditable "
+                    "replacement. Ask at most one targeted question for the missing correction."
+                )
         if self.interaction_quality is not None:
             dialogue_state_block += (
                 "\nInteraction quality:"
