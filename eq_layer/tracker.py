@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import Protocol
 
+from .dialogue_reference import (
+    DialogueReferenceState,
+    infer_dialogue_reference,
+)
 from .interaction import (
     InteractionQualityState,
     RepairState,
@@ -64,6 +68,7 @@ class TrackingResult:
     stance: StanceDecision
     repair: RepairState
     interaction_quality: InteractionQualityState
+    reference: DialogueReferenceState
 
 
 @dataclass
@@ -90,6 +95,7 @@ class ConversationTracker:
         stance = self.stance.resolve(messages, annotated=annotated)
         repair = infer_repair_state(messages)
         interaction_quality = infer_interaction_quality(messages)
+        reference = infer_dialogue_reference(messages)
         state = replace(
             base,
             subtext=subtext.label,
@@ -101,4 +107,5 @@ class ConversationTracker:
             stance=stance,
             repair=repair,
             interaction_quality=interaction_quality,
+            reference=reference,
         )
