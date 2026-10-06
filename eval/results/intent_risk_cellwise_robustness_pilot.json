@@ -1,0 +1,88 @@
+{
+  "audit": "intent-risk-cellwise-robustness-pilot",
+  "status": "development-only",
+  "source": {
+    "workflow_run_id": 37457976351,
+    "workflow_head_sha": "674e69c20dfb630f516971df38a24f8a18c82b84",
+    "provenance_artifact": "eq-layer-qwen-openweight-pilot-provenance",
+    "provenance_artifact_digest": "sha256:2f6c3e14b5e3fe166e4d5012d7c9ac40e51c06fb343a44929b72218dd7c6aa3f",
+    "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+    "cases": 12,
+    "selection": "stratified 4/4/4 across empathetic/task_general/task_repair"
+  },
+  "production_routing": {
+    "action_counts": {
+      "clarify": 6,
+      "status_check": 2,
+      "statement": 4
+    },
+    "clarification_rate": 0.5,
+    "raw_to_fused_action_flips": 3
+  },
+  "cellwise_robustness": {
+    "factors": [
+      0.8,
+      1.2
+    ],
+    "nonzero_loss_cells": 31,
+    "perturbations_per_case": 62,
+    "decisions_tested": 744,
+    "total_action_flips": 14,
+    "decision_stability_rate": 0.9812,
+    "fully_stable_cases": 8,
+    "by_stratum": {
+      "empathetic": {
+        "n": 4,
+        "flips": 1,
+        "decisions_tested": 248,
+        "decision_stability_rate": 0.996,
+        "brittle_case_ids": [
+          "external-002"
+        ]
+      },
+      "task_general": {
+        "n": 4,
+        "flips": 1,
+        "decisions_tested": 248,
+        "decision_stability_rate": 0.996,
+        "brittle_case_ids": [
+          "external-094"
+        ]
+      },
+      "task_repair": {
+        "n": 4,
+        "flips": 12,
+        "decisions_tested": 248,
+        "decision_stability_rate": 0.9516,
+        "brittle_case_ids": [
+          "external-063",
+          "external-064"
+        ]
+      }
+    },
+    "most_influential_perturbations": [
+      {
+        "perturbation": "clarify:action_requestx1.2",
+        "flip_count": 2
+      },
+      {
+        "perturbation": "clarify:statementx0.8",
+        "flip_count": 2
+      },
+      {
+        "perturbation": "clarify:statementx1.2",
+        "flip_count": 2
+      },
+      {
+        "perturbation": "clarify:status_checkx1.2",
+        "flip_count": 2
+      }
+    ]
+  },
+  "interpretation": [
+    "Local routing is largely stable under one-at-a-time ±20% loss-cell perturbations in this 12-case engineering pilot.",
+    "Sensitivity is concentrated in task_repair cases, so repair routing remains the priority for further external validation.",
+    "This does not validate the hand-specified loss matrix as optimal and must not be tuned against blinded human preference outcomes.",
+    "This is not evidence that EQ-Layer improves final response quality."
+  ]
+}
