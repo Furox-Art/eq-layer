@@ -31,8 +31,16 @@ def prepare_blinded(
     pairs: list[dict],
     *,
     seed: int = 0,
+    arm_names: tuple[str, str] = ("eq", "baseline"),
 ) -> tuple[list[dict], dict]:
-    """Randomize baseline/EQ sides and return ballot + separate decode key."""
+    """Randomize the two response sides and return ballot + separate decode key.
+
+    arm_names labels (eq, baseline) in the decode key so the key can describe an
+    arm honestly. The primary endpoint compares the EQ response against the
+    calibrated length-matched control rather than against the raw baseline, and
+    calling that control "baseline" in the artifact would misdescribe it.
+    """
+    eq_arm, control_arm = arm_names
     rng = random.Random(seed)
     ballot: list[dict] = []
     key: dict[str, dict[str, str]] = {}
@@ -53,8 +61,8 @@ def prepare_blinded(
         response_a = eq_response if eq_is_a else baseline
         response_b = baseline if eq_is_a else eq_response
         key[case_id] = {
-            "A": "eq" if eq_is_a else "baseline",
-            "B": "baseline" if eq_is_a else "eq",
+            "A": eq_arm if eq_is_a else control_arm,
+            "B": control_arm if eq_is_a else eq_arm,
         }
         ballot.append(
             {

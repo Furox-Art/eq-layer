@@ -1,0 +1,131 @@
+# Primary-endpoint generation and blinded ballot at full held-out scale.
+#
+# Length is calibrated inside this run rather than inherited from the 12-case
+# pilot, because a profile that matched on 12 cases is not evidence that it
+# matches on 120.
+#
+# The ballot compares EQ against the calibrated length-matched control, not
+# against the raw baseline. Against the raw baseline the EQ arm runs several
+# times shorter and any preference would partly measure length.
+name: Length-Matched Full 120
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/lengthmatched-full120.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: eq-layer-lm-full120-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full120:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      HF_HUB_DISABLE_PROGRESS_BARS: "1"
+      TRANSFORMERS_VERBOSITY: "error"
+      TOKENIZERS_PARALLELISM: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[ml]"
+          python -m pip install "torch>=2.2,<3" "transformers>=4.46,<5"
+
+      - name: Build external held-out source set
+        run: |
+          mkdir -p artifacts
+          python tools/build_ab_heldout.py \
+            --output artifacts/ab_heldout_120.jsonl \
+            --manifest artifacts/ab_heldout_120.manifest.json \
+            --seed 20261005
+
+      - name: Train learned EQ-Layer components
+        run: |
+          python tools/train_emobank_affect.py \
+            --output artifacts/emobank_affect.joblib
+          python tools/train_xdailydialog_subtext.py \
+            --output artifacts/xdailydialog_subtext.joblib
+
+      - name: Enforce held-out preflight
+        run: python eval/ab_case_preflight.py artifacts/ab_heldout_120.jsonl --final
+
+      - name: Check generation reproducibility
+        run: |
+          python eval/reproducibility_check.py \
+            --model-command "python eval/hf_model_server.py --model-id Qwen/Qwen2.5-0.5B-Instruct --max-new-tokens 80 --cpu-threads 1" \
+            --output eval/results/qwen_reproducibility.json
+
+      - name: Generate arms and sweep length profiles
+        run: |
+          python eval/ab_generate.py \
+            artifacts/ab_heldout_120.jsonl \
+            artifacts/qwen_lm120_pairs.jsonl \
+            artifacts/qwen_lm120_generation_manifest.json \
+            --model-command "python eval/hf_model_server.py --model-id Qwen/Qwen2.5-0.5B-Instruct --max-new-tokens 80 --cpu-threads 1" \
+            --model-id Qwen/Qwen2.5-0.5B-Instruct \
+            --affect-model artifacts/emobank_affect.joblib \
+            --subtext-model artifacts/xdailydialog_subtext.joblib \
+            --temperature 0 \
+            --seed 42 \
+            --length-profile shortest_complete \
+            --length-profile one_sentence \
+            --length-profile two_sentence \
+            --persistent-model-command \
+            --git-commit "$GITHUB_SHA"
+
+      - name: Calibrate length control at full scale
+        run: |
+          python eval/length_calibration.py \
+            artifacts/qwen_lm120_pairs.jsonl \
+            --output eval/results/qwen_lm120_calibration.json
+
+      - name: Report arm lengths
+        run: |
+          python eval/length_report.py \
+            artifacts/qwen_lm120_pairs.jsonl \
+            --output eval/results/qwen_lm120_length.json
+
+      - name: Prepare primary-endpoint ballot
+        run: |
+          python eval/prepare_selected_ballot.py \
+            artifacts/qwen_lm120_pairs.jsonl \
+            eval/results/qwen_lm120_calibration.json \
+            artifacts/qwen_lm120_ballot.jsonl \
+            artifacts/qwen_lm120_key.json \
+            --seed 4242
+
+      - name: Upload generation provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq-layer-qwen-lm120-provenance
+          path: |
+            artifacts/ab_heldout_120.manifest.json
+            artifacts/qwen_lm120_pairs.jsonl
+            artifacts/qwen_lm120_generation_manifest.json
+            eval/results/qwen_lm120_calibration.json
+            eval/results/qwen_lm120_length.json
+          if-no-files-found: error
+
+      - name: Upload blinded ballot
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq-layer-qwen-lm120-ballot
+          path: artifacts/qwen_lm120_ballot.jsonl
+          if-no-files-found: error
+
+      - name: Upload decode key separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq-layer-qwen-lm120-key
+          path: artifacts/qwen_lm120_key.json
+          if-no-files-found: error
