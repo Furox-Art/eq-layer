@@ -7,59 +7,50 @@ EQ-Layer publishes two artifacts with the same semantic version.
 
 Current release: **0.1.0**.
 
+## PyPI automatic release flow
+
+PyPI publishing is release-driven. A normal push to `main` never publishes a
+package.
+
+To publish a new version:
+
+1. update `pyproject.toml` to the new version, for example `0.2.0`;
+2. let the normal CI pass on `main`;
+3. create and publish a GitHub Release tagged `v0.2.0`;
+4. `.github/workflows/release.yml` verifies that the release tag and package
+   version match;
+5. the workflow builds the wheel/sdist, runs `twine check`, and publishes to
+   PyPI through GitHub OIDC / PyPI Trusted Publishing.
+
+If the GitHub Release tag and `pyproject.toml` version differ, publishing fails
+before any upload. This prevents a release tag from silently publishing the
+wrong package version.
+
+The PyPI Trusted Publisher must match:
+
+- project: `eq-layer`
+- owner: `Furox-Art`
+- repository: `eq-layer`
+- workflow: `release.yml`
+- environment: `pypi`
+
+No long-lived PyPI API token is required.
+
+## Manual PyPI recovery
+
+The same workflow has a manual dispatch input named `version`. Use it only for
+recovery/retry. The supplied version must still exactly match
+`pyproject.toml`.
+
+## npm
+
+npm publishing is intentionally separate in
+`.github/workflows/publish-npm.yml` until npm authentication/trusted publishing
+is fully configured. A failed npm publication therefore cannot make a PyPI
+release workflow fail.
+
 ## Release validation
 
-Every main-branch CI run builds and checks the Python distributions and performs
-an npm package dry-run. A registry publish must not bypass these checks.
-
-## PyPI: one-time trusted-publisher setup
-
-PyPI supports creating a new project through a **pending Trusted Publisher**.
-Before the first publish, configure:
-
-- PyPI project name: `eq-layer`
-- GitHub owner: `Furox-Art`
-- GitHub repository: `eq-layer`
-- Workflow: `release.yml`
-- Environment: leave blank unless you intentionally add one later
-
-The release workflow uses GitHub OIDC and does not require a long-lived PyPI
-token.
-
-## npm: first publish and trusted publishing
-
-npm trusted publishing is configured from an existing package's settings. For
-the first publication, add a repository secret named `NPM_TOKEN` with
-permission to publish `eq-layer`. The release workflow provides that token as a
-fallback.
-
-After the first npm release:
-
-1. Open the `eq-layer` package settings on npm.
-2. Add GitHub Actions as a Trusted Publisher for `Furox-Art/eq-layer` and
-   `.github/workflows/release.yml`.
-3. Allow direct `npm publish`.
-4. Remove the long-lived `NPM_TOKEN` repository secret.
-
-npm 11.5.1+ automatically prefers OIDC in a supported GitHub Actions
-environment, falling back to the token only when needed.
-
-## Triggering a release
-
-The workflow can be run manually. The repository also contains
-`.release-trigger`; changing it to the next version triggers the release
-workflow from `main`.
-
-Before changing the trigger:
-
-1. update the version in `pyproject.toml`, `package.json`, and CLI metadata;
-2. run CI;
-3. ensure the corresponding registry publisher/authentication is configured;
-4. change `.release-trigger` as the final release commit.
-
-## Claim boundary
-
-Publishing a package does not change the scientific evidence level. The
-120-case generation is complete and blinded-ballot ready, but human preference
-adjudication and independent loss-matrix calibration remain separate empirical
-steps.
+Normal main-branch CI continues to build/check the Python distributions and
+perform an npm package dry-run. Publishing a package does not change the
+scientific evidence level.

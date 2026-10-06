@@ -1,11 +1,14 @@
-name: Publish PyPI and npm
+name: Publish PyPI
 
 on:
+  release:
+    types: [published]
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - ".release-trigger"
+    inputs:
+      version:
+        description: "Version to publish, for example 0.2.0"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -16,9 +19,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Verify release tag matches package version
+        env:
+          RELEASE_VERSION: ${{ github.event.release.tag_name || inputs.version }}
+        run: |
+          expected="${RELEASE_VERSION#v}"
+          actual="$(python - <<'PY'
+          import tomllib
+          with open("pyproject.toml", "rb") as fh:
+              print(tomllib.load(fh)["project"]["version"])
+          PY
+          )"
+          echo "release=${expected} package=${actual}"
+          test "${actual}" = "${expected}"
       - name: Build and validate Python distributions
         run: |
           python -m pip install --upgrade pip
@@ -42,23 +60,3 @@ jobs:
           path: dist
       - name: Publish to PyPI using trusted publishing
         uses: pypa/gh-action-pypi-publish@release/v1
-
-  publish-npm:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          registry-url: "https://registry.npmjs.org"
-          package-manager-cache: false
-      - name: Ensure OIDC-capable npm
-        run: npm install --global "npm@>=11.5.1"
-      - name: Validate npm package
-        run: |
-          npm test
-          npm pack --dry-run --json
-      - name: Publish npm package
-        run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
