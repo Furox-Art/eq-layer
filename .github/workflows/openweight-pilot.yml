@@ -17,6 +17,7 @@ on:
       - "eq_layer/interaction.py"
       - "eq_layer/actions.py"
       - "eval/ab_generate.py"
+      - "eval/intent_risk_sensitivity.py"
       - "tools/build_ab_heldout.py"
       - ".github/workflows/openweight-pilot.yml"
   workflow_dispatch:
@@ -78,6 +79,12 @@ jobs:
             --persistent-model-command \
             --git-commit "$GITHUB_SHA"
 
+      - name: Audit intent-loss robustness
+        run: |
+          python eval/intent_risk_sensitivity.py \
+            artifacts/qwen_pilot_pairs.jsonl \
+            --output artifacts/qwen_pilot_intent_risk_sensitivity.json
+
       - name: Prepare blinded pilot ballot
         run: |
           python eval/ab_prepare.py \
@@ -94,6 +101,7 @@ jobs:
             artifacts/ab_heldout_120.manifest.json
             artifacts/qwen_pilot_pairs.jsonl
             artifacts/qwen_pilot_generation_manifest.json
+            artifacts/qwen_pilot_intent_risk_sensitivity.json
           if-no-files-found: error
 
       - name: Upload blinded ballot
