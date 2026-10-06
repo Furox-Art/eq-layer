@@ -138,10 +138,15 @@ small, while ambiguity between executing an action and merely responding to a
 statement can trigger clarification.
 
 The current loss matrix is **hand-specified and transparent, not learned or
-claimed optimal**. It encodes relative interaction costs and must be calibrated
-or sensitivity-tested before strong real-world claims. The old confidence and
-margin fields remain serialized for backwards compatibility and diagnostics;
-they no longer choose the learned intent route.
+claimed optimal**. It encodes relative interaction costs. EQ-Layer therefore
+audits routing sensitivity rather than treating one matrix as ground truth:
+`eval/intent_risk_sensitivity.py` sweeps clarification cost and performs
+one-at-a-time ±20% perturbations of every non-zero loss cell, reporting action
+flips overall and by source stratum. This is a local robustness diagnostic, not
+loss-matrix optimization, and it must not be tuned against blinded human
+preference outcomes. The old confidence and margin fields remain serialized for
+backwards compatibility and diagnostics; they no longer choose the learned
+intent route.
 
 Explicit constraints such as `brief`, `scope_limited`, and `no_guess`
 remain deterministic because they are control requirements, not semantic
