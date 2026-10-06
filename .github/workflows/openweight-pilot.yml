@@ -17,6 +17,7 @@ on:
       - "eq_layer/interaction.py"
       - "eq_layer/actions.py"
       - "eval/ab_generate.py"
+      - "eval/heldout_control_audit.py"
       - "eval/intent_risk_sensitivity.py"
       - "tools/build_ab_heldout.py"
       - ".github/workflows/openweight-pilot.yml"
@@ -62,6 +63,18 @@ jobs:
           python tools/train_xdailydialog_subtext.py \
             --output artifacts/xdailydialog_subtext.joblib
 
+      - name: Audit full heldout control path
+        run: |
+          python eval/heldout_control_audit.py \
+            artifacts/ab_heldout_120.jsonl \
+            artifacts/heldout_control_records.jsonl \
+            --affect-model artifacts/emobank_affect.joblib \
+            --subtext-model artifacts/xdailydialog_subtext.joblib \
+            --final
+          python eval/intent_risk_sensitivity.py \
+            artifacts/heldout_control_records.jsonl \
+            --output artifacts/heldout_control_intent_risk_sensitivity.json
+
       - name: Generate same-model baseline vs EQ pilot
         run: |
           python eval/ab_generate.py \
@@ -102,6 +115,8 @@ jobs:
             artifacts/qwen_pilot_pairs.jsonl
             artifacts/qwen_pilot_generation_manifest.json
             artifacts/qwen_pilot_intent_risk_sensitivity.json
+            artifacts/heldout_control_records.jsonl
+            artifacts/heldout_control_intent_risk_sensitivity.json
           if-no-files-found: error
 
       - name: Upload blinded ballot
