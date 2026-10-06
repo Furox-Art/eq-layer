@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .actions import FactoredAction, compose_action
+from .dialogue_reference import DialogueReferenceState
 from .intent import IntentState
 from .interaction import InteractionQualityState, RepairState
 from .policies import Policy, Register
@@ -40,6 +41,7 @@ class Steer:
     action: FactoredAction | None = None
     repair: RepairState | None = None
     interaction_quality: InteractionQualityState | None = None
+    reference: DialogueReferenceState | None = None
     prefix: str = ""
     logit_bias: dict[int, float] = field(default_factory=dict)
 
@@ -51,17 +53,20 @@ class Steer:
         *,
         repair: RepairState | None = None,
         interaction_quality: InteractionQualityState | None = None,
+        reference: DialogueReferenceState | None = None,
     ) -> "Steer":
         return cls(
             policy=policy,
             intent=intent,
             repair=repair,
             interaction_quality=interaction_quality,
+            reference=reference,
             action=compose_action(
                 policy,
                 intent,
                 repair=repair,
                 interaction_quality=interaction_quality,
+                reference=reference,
             ),
             prefix=f"[{policy.register.value}] ",
         )
@@ -73,6 +78,11 @@ class Steer:
             self.repair is not None
             and self.repair.active
             and self.repair.replacement_explicit
+        )
+        reference_resolved = bool(
+            self.reference is not None
+            and self.reference.active
+            and self.reference.resolved
         )
         intent_block = ""
         if self.intent is not None:
@@ -96,7 +106,11 @@ class Steer:
                     f"\nIntent routing decision: {self.intent.risk_decision.action}; "
                     f"expected_loss={self.intent.risk_decision.expected_loss:.3f}."
                 )
-            if self.intent.needs_clarification and not repair_has_replacement:
+            if (
+                self.intent.needs_clarification
+                and not repair_has_replacement
+                and not reference_resolved
+            ):
                 intent_block += "\nDo not guess the missing referent. Ask exactly one targeted question."
             elif repair_has_replacement:
                 intent_block += (
@@ -110,6 +124,7 @@ class Steer:
             self.intent,
             repair=self.repair,
             interaction_quality=self.interaction_quality,
+            reference=self.reference,
         )
         controls = action.realization
         action_block = (
@@ -132,6 +147,34 @@ class Steer:
         )
 
         dialogue_state_block = ""
+        if self.reference is not None:
+            dialogue_state_block += (
+                "\nDialogue reference state:"
+                f" active={str(self.reference.active).lower()},"
+                f" form={self.reference.form},"
+                f" resolved={str(self.reference.resolved).lower()},"
+                f" target_turn={self.reference.target_turn_index},"
+                f" target_role={self.reference.target_role or 'none'}."
+                "\nThis is a structural reference anchor, not proof that a prior "
+                "goal is semantically unresolved or factually correct."
+            )
+            if self.reference.active and self.reference.resolved:
+                dialogue_state_block += (
+                    f'\nResolved reference target: "{self.reference.target_excerpt}".'
+                    "\nInterpret the latest short deictic/continuation turn only "
+                    "against this target. Do not ask the user to repeat the referent "
+                    "solely because the latest turn is short."
+                )
+                if self.reference.anchor_excerpt:
+                    dialogue_state_block += (
+                        f'\nTarget context anchor: "{self.reference.anchor_excerpt}".'
+                    )
+            elif self.reference.active:
+                dialogue_state_block += (
+                    "\nNo safe structural target was found. Do not guess the "
+                    "referent; ask exactly one targeted clarification question."
+                )
+
         if self.repair is not None:
             dialogue_state_block += (
                 "\nRepair state:"
