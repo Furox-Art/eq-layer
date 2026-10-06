@@ -11,6 +11,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from eq_layer.actions import compose_action  # noqa: E402
+from eq_layer.dialogue_reference import DialogueReferenceState  # noqa: E402
 from eq_layer.intent import IntentState  # noqa: E402
 from eq_layer.interaction import InteractionQualityState, RepairState  # noqa: E402
 from eq_layer.policies import REGISTRY  # noqa: E402
@@ -136,6 +137,49 @@ def main() -> int:
     if not ambiguous.realization.no_guess:
         raise AssertionError("Clarification task must forbid guessing.")
 
+    # A structurally resolved short reference can preserve task progress even if
+    # the latest turn alone looks ambiguous to the intent classifier.
+    resolved_reference = DialogueReferenceState(
+        active=True,
+        form="continue",
+        resolved=True,
+        target_turn_index=0,
+        target_role="user",
+        target_excerpt="Run the analysis.",
+        confidence=1.0,
+        evidence=("test",),
+    )
+    referenced = compose_action(
+        REGISTRY["clarify_request"],
+        intent("unknown", clarify=True),
+        reference=resolved_reference,
+    )
+    if referenced.task_move != "continue_referenced_goal":
+        raise AssertionError(
+            f"Resolved continuation did not preserve task progress: {referenced}"
+        )
+
+    unresolved_reference = DialogueReferenceState(
+        active=True,
+        form="execute_reference",
+        resolved=False,
+        requires_clarification=True,
+        evidence=("test",),
+    )
+    unresolved = compose_action(
+        REGISTRY["execute_request"],
+        action_intent,
+        reference=unresolved_reference,
+    )
+    if unresolved.task_move != "clarify_reference":
+        raise AssertionError(
+            f"Unresolved deictic reference was guessed: {unresolved}"
+        )
+    if unresolved.realization.question_budget != 1:
+        raise AssertionError("Reference clarification must allow one question.")
+    if not unresolved.realization.no_guess:
+        raise AssertionError("Reference clarification must prohibit guessing.")
+
     # Repeated repair without an explicit replacement temporarily gates the
     # prior task behind one targeted clarification. This is repair, not affective
     # task replacement.
@@ -225,6 +269,31 @@ def main() -> int:
     missing = [value for value in required if value not in instruction]
     if missing:
         raise AssertionError(f"Factored controls missing from steering: {missing}")
+
+    reference_steer = Steer.build(
+        REGISTRY["clarify_request"],
+        intent("unknown", clarify=True),
+        reference=resolved_reference,
+    )
+    reference_instruction = reference_steer.system_instruction()
+    required_reference_text = (
+        "task_move: continue_referenced_goal",
+        "Dialogue reference state:",
+        "Resolved reference target:",
+        "Do not ask the user to repeat the referent",
+    )
+    missing_reference_text = [
+        value for value in required_reference_text
+        if value not in reference_instruction
+    ]
+    if missing_reference_text:
+        raise AssertionError(
+            f"Reference-aware steering is incomplete: {missing_reference_text}"
+        )
+    if "Do not guess the missing referent. Ask exactly one targeted question." in reference_instruction:
+        raise AssertionError(
+            "Resolved reference still triggered generic intent clarification."
+        )
 
     repaired_steer = Steer.build(
         REGISTRY["ask_one_question"],
