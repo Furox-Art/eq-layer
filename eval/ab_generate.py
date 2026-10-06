@@ -27,6 +27,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from eq_layer.ab_eval import load_jsonl, write_jsonl  # noqa: E402
 from eq_layer.response_experiment import (  # noqa: E402
+    LENGTH_CONTROL_PROFILES,
     CommandModel,
     FullEQPipeline,
     experiment_manifest,
@@ -65,6 +66,18 @@ def main() -> int:
             "question_budget) and receives no EQ-Layer decision. EQ-vs-length_matched "
             "isolates the deterministic policy contribution from the length confound; "
             "EQ-vs-baseline does not."
+        ),
+    )
+    parser.add_argument(
+        "--length-profile",
+        action="append",
+        dest="length_profiles",
+        choices=sorted(LENGTH_CONTROL_PROFILES),
+        default=None,
+        help=(
+            "Generate one length-matched control arm per profile so a single pass "
+            "covers the calibration sweep. Repeatable. Selection is made on arm "
+            "length only, never on preference outcomes."
         ),
     )
     parser.add_argument("--seed", type=int, default=0)
@@ -153,6 +166,7 @@ def main() -> int:
         allow_annotations=args.allow_oracle_annotations,
         auditor_regenerations=args.auditor_regenerations,
         length_matched_arm=args.length_matched_arm,
+        length_profiles=tuple(args.length_profiles or ()),
     )
     write_jsonl(args.pairs, pairs)
 
@@ -167,6 +181,7 @@ def main() -> int:
         git_commit=args.git_commit,
         auditor_regenerations=args.auditor_regenerations,
         length_matched_arm=args.length_matched_arm,
+        length_profiles=tuple(args.length_profiles or ()),
     )
     manifest["development_cases_allowed"] = args.allow_development_cases
     manifest["final_mode"] = args.final

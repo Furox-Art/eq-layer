@@ -62,9 +62,18 @@ jobs:
             --temperature 0 \
             --seed 42 \
             --limit 12 \
-            --length-matched-arm \
+            --length-profile generic \
+            --length-profile terse \
+            --length-profile minimal \
+            --length-profile one_line \
             --persistent-model-command \
             --git-commit "$GITHUB_SHA"
+
+      - name: Calibrate length control profile
+        run: |
+          python eval/length_calibration.py \
+            artifacts/qwen_lm12_pairs.jsonl \
+            --output eval/results/qwen_lm12_calibration.json
 
       - name: Compare arm lengths
         run: |
@@ -84,4 +93,11 @@ jobs:
         with:
           name: eq-layer-qwen-lm12-length
           path: eval/results/qwen_lm12_length.json
+          if-no-files-found: error
+
+      - name: Upload calibration
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq-layer-qwen-lm12-calibration
+          path: eval/results/qwen_lm12_calibration.json
           if-no-files-found: error

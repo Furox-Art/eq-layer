@@ -464,21 +464,56 @@ class FullEQPipeline:
 # length-matched control arm: the model is asked for the same amount of text it
 # is asked for in the EQ arm, but receives no affect, intent, task or repair
 # decision. Without it, EQ-vs-baseline measures length as much as steering.
-LENGTH_CONTROL_INSTRUCTION = (
-    "Keep the reply short. Use at most {question_budget} question(s), and do not "
-    "restate the conversation, add preamble, or add offers of further help. "
-    "Answer directly in as few sentences as the request needs."
-)
+#
+# The profiles exist because a single generic brevity instruction undershoots:
+# on a 12-case Qwen pilot the first version left EQ at 0.793 of the control,
+# still a 1.28x gap. A policy-derived instruction constrains harder than a
+# generic one, so the control needs a dial.
+#
+# Calibration selects among these on length alone. Tuning the control against
+# preference outcomes would fit the nuisance variable to the result it is meant
+# to be compared against.
+LENGTH_CONTROL_PROFILES: dict[str, str] = {
+    "generic": (
+        "Answer directly in as few sentences as the request needs. Use at most "
+        "{question_budget} question(s), and do not add preamble or offers of further help."
+    ),
+    "terse": (
+        "Reply in one or two sentences. Use at most {question_budget} question(s). "
+        "No preamble, no restatement of the conversation, no offer of further help, "
+        "no summary of what you are about to say."
+    ),
+    "minimal": (
+        "Give the single most useful reply and nothing else. One or two sentences. "
+        "Use at most {question_budget} question(s). Do not restate the conversation, "
+        "do not add preamble, do not offer further help, do not summarise, and do "
+        "not explain your reasoning."
+    ),
+    "one_line": (
+        "Answer in one sentence if that is enough, otherwise two. Use at most "
+        "{question_budget} question(s). No preamble, no restatement, no caveats, no "
+        "offers of further help, no summary. If the request needs nothing more than "
+        "a direct reply, give exactly that."
+    ),
+}
+
+DEFAULT_LENGTH_PROFILE = "generic"
 
 
 def build_length_matched_messages(
     messages: list[dict],
     realization: dict,
+    profile: str = DEFAULT_LENGTH_PROFILE,
 ) -> list[dict]:
     """Baseline arm with only the surface budget pinned, not the EQ policy."""
+    if profile not in LENGTH_CONTROL_PROFILES:
+        raise ValueError(
+            f"Unknown length profile {profile!r}; expected one of "
+            f"{sorted(LENGTH_CONTROL_PROFILES)}"
+        )
     budget = realization.get("question_budget", 0)
-    instruction = LENGTH_CONTROL_INSTRUCTION.format(question_budget=budget)
-    if realization.get("verbosity") != "low":
+    instruction = LENGTH_CONTROL_PROFILES[profile].format(question_budget=budget)
+    if realization.get("verbosity") != "low" and profile == DEFAULT_LENGTH_PROFILE:
         instruction = (
             "Answer directly in as few sentences as the request needs. "
             "Use at most "
@@ -496,9 +531,17 @@ def generate_pairs(
     allow_annotations: bool = False,
     auditor_regenerations: int = 0,
     length_matched_arm: bool = False,
+    length_profiles: tuple[str, ...] | None = None,
 ) -> list[dict]:
     if auditor_regenerations not in {0, 1}:
         raise ValueError("auditor_regenerations must be 0 or 1.")
+    profiles = tuple(length_profiles or ())
+    for name in profiles:
+        if name not in LENGTH_CONTROL_PROFILES:
+            raise ValueError(
+                f"Unknown length profile {name!r}; expected one of "
+                f"{sorted(LENGTH_CONTROL_PROFILES)}"
+            )
 
     rng = random.Random(seed)
     output: list[dict] = []
@@ -522,7 +565,15 @@ def generate_pairs(
             )
 
             pair_seed = stable_case_seed(seed, case_id)
-            conditions = ["baseline", "eq", "length_matched"] if length_matched_arm else ["baseline", "eq"]
+            realization = (eq_meta.get("factored_action") or {}).get("realization") or {}
+            # One arm per profile so a single generation pass covers the whole
+            # calibration sweep. Each arm is an independent condition with the
+            # same model, temperature and per-case seed.
+            conditions = ["baseline", "eq"] + [
+                f"length_matched:{name}" for name in profiles
+            ]
+            if length_matched_arm and not profiles:
+                conditions.append("length_matched")
             rng.shuffle(conditions)
             responses: dict[str, str] = {}
 
@@ -532,9 +583,15 @@ def generate_pairs(
                 elif condition == "eq":
                     condition_messages = eq_messages
                 else:
+                    profile = (
+                        condition.split(":", 1)[1]
+                        if ":" in condition
+                        else DEFAULT_LENGTH_PROFILE
+                    )
                     condition_messages = build_length_matched_messages(
                         messages,
-                        (eq_meta.get("factored_action") or {}).get("realization") or {},
+                        realization,
+                        profile,
                     )
                 responses[condition] = model.generate(
                     condition_messages,
@@ -593,8 +650,12 @@ def generate_pairs(
             }
             if regeneration_count:
                 record["eq_initial"] = initial_eq
-            if length_matched_arm:
+            for name in profiles:
+                record[f"length_matched_{name}"] = responses[f"length_matched:{name}"]
+            if length_matched_arm and not profiles:
                 record["length_matched"] = responses["length_matched"]
+            if profiles:
+                record["length_profiles"] = list(profiles)
 
             output.append(record)
     finally:
@@ -614,12 +675,23 @@ def experiment_manifest(
     git_commit: str | None = None,
     auditor_regenerations: int = 0,
     length_matched_arm: bool = False,
+    length_profiles: tuple[str, ...] = (),
 ) -> dict:
+    profiles = list(length_profiles)
+    arms = (
+        ["baseline", "eq"]
+        + [f"length_matched:{name}" for name in profiles]
+        + (["length_matched"] if length_matched_arm and not profiles else [])
+    )
     return {
         "design": (
-            "same-base-model three-arm baseline-vs-length-matched-vs-eq-layer"
-            if length_matched_arm
-            else "same-base-model paired baseline-vs-eq-layer"
+            "same-base-model length-calibration sweep"
+            if profiles
+            else (
+                "same-base-model three-arm baseline-vs-length-matched-vs-eq-layer"
+                if length_matched_arm
+                else "same-base-model paired baseline-vs-eq-layer"
+            )
         ),
         "model_id": model.model_id,
         "model_command_executable": model.command[0],
@@ -642,8 +714,14 @@ def experiment_manifest(
         "subtext_model_sha256": file_sha256(subtext_model),
         "eq_layer_git_commit": git_commit,
         "pairing_rule": "same model id, same sampling temperature, same per-case seed",
-        "arms": ["baseline", "eq", "length_matched"] if length_matched_arm else ["baseline", "eq"],
+        "arms": arms,
         "length_matched_arm": length_matched_arm,
+        "length_profiles": profiles,
+        "length_profile_selection": (
+            "Chosen on arm length only. The control must not be tuned against "
+            "preference outcomes, or the nuisance variable gets fitted to the "
+            "result it exists to be compared against."
+        ),
         "arm_difference": (
             "EQ arm prepends only the EQ-Layer system control instruction; "
             "the original transcript is preserved identically in both arms."

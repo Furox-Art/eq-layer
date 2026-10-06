@@ -19,7 +19,8 @@ import tempfile
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from eq_layer.response_experiment import (  # noqa: E402
-    LENGTH_CONTROL_INSTRUCTION,
+    DEFAULT_LENGTH_PROFILE,
+    LENGTH_CONTROL_PROFILES,
     build_length_matched_messages,
     experiment_manifest,
 )
@@ -49,9 +50,14 @@ def main() -> int:
     ]
 
     # Budget is pinned from the deterministic realization, not invented.
-    built = build_length_matched_messages(transcript, {"verbosity": "low", "question_budget": 1})
+    built = build_length_matched_messages(
+        transcript, {"verbosity": "low", "question_budget": 1}, "generic"
+    )
     check(built[0]["role"] == "system", "length-matched arm must prepend a system message")
-    check(built[0]["content"] == LENGTH_CONTROL_INSTRUCTION.format(question_budget=1), "budget must come from realization")
+    check(
+        built[0]["content"] == LENGTH_CONTROL_PROFILES["generic"].format(question_budget=1),
+        "budget must come from the realization",
+    )
     check("1 question" in built[0]["content"], "question budget must appear in the instruction")
     check(built[1:] == transcript, "original transcript must be preserved verbatim")
     check(
@@ -59,13 +65,49 @@ def main() -> int:
         "exactly one message must be added, not a rewritten transcript",
     )
 
-    # No EQ policy content may leak into the control arm.
-    control_text = built[0]["content"].lower()
-    for leak in ("empath", "affect", "policy", "mirror", "validate", "stance", "subtext"):
-        check(leak not in control_text, f"control arm must not mention policy concept: {leak}")
+    # No EQ policy content may leak into any control profile.
+    for name in LENGTH_CONTROL_PROFILES:
+        arm = build_length_matched_messages(
+            transcript, {"verbosity": "low", "question_budget": 1}, name
+        )
+        control_text = arm[0]["content"].lower()
+        for leak in ("empath", "affect", "policy", "mirror", "validate", "stance", "subtext"):
+            check(
+                leak not in control_text,
+                f"profile {name} must not mention policy concept: {leak}",
+            )
+        check(arm[1:] == transcript, f"profile {name} must preserve the transcript")
+        check(
+            "1 question" in arm[0]["content"],
+            f"profile {name} must carry the question budget",
+        )
+
+    # Profiles must be distinct instructions, not duplicates of one template.
+    rendered = {
+        LENGTH_CONTROL_PROFILES[name].format(question_budget=1)
+        for name in LENGTH_CONTROL_PROFILES
+    }
+    check(
+        len(rendered) == len(LENGTH_CONTROL_PROFILES),
+        "every profile must render a distinct instruction",
+    )
+
+    # An unknown profile is an error rather than a silent fallback.
+    try:
+        build_length_matched_messages(transcript, {"verbosity": "low", "question_budget": 1}, "nope")
+        FAILURES.append("unknown profile should raise")
+    except ValueError:
+        pass
+
+    check(
+        DEFAULT_LENGTH_PROFILE in LENGTH_CONTROL_PROFILES,
+        "the default profile must exist",
+    )
 
     # A non-low verbosity still gets a budget instruction rather than nothing.
-    normal = build_length_matched_messages(transcript, {"verbosity": "normal", "question_budget": 0})
+    normal = build_length_matched_messages(
+        transcript, {"verbosity": "normal", "question_budget": 0}, "generic"
+    )
     check(normal[0]["role"] == "system", "normal verbosity must still produce an instruction")
     check("0 question" in normal[0]["content"], "zero budget must still be stated")
 
@@ -104,6 +146,44 @@ def main() -> int:
         "isolates" in manifest["length_control"],
         "length_control must state that EQ-vs-length_matched is the clean comparison",
     )
+
+    # A sweep records every arm and states that selection happens on length.
+    sweep = experiment_manifest(
+        n_cases=12,
+        cases_path=cases_path,
+        affect_model=affect_model,
+        subtext_model=subtext_model,
+        model=FakeModel(),
+        global_seed=42,
+        allow_annotations=False,
+        length_profiles=("generic", "terse", "minimal", "one_line"),
+    )
+    check(len(sweep["arms"]) == 6, f"sweep should record six arms, got {sweep['arms']}")
+    check(
+        all(f"length_matched:{n}" in sweep["arms"] for n in ("generic", "terse", "minimal", "one_line")),
+        "every profile must appear as its own arm",
+    )
+    check(
+        "length only" in sweep["length_profile_selection"],
+        "manifest must state that profile selection uses length only",
+    )
+    check("sweep" in sweep["design"], "sweep design should be named")
+
+    # An unknown profile must be rejected at manifest time too.
+    try:
+        experiment_manifest(
+            n_cases=1,
+            cases_path=cases_path,
+            affect_model=affect_model,
+            subtext_model=subtext_model,
+            model=FakeModel(),
+            global_seed=42,
+            allow_annotations=False,
+            length_profiles=("does_not_exist",),
+        )
+        FAILURES.append("unknown profile should be rejected by the manifest")
+    except ValueError:
+        pass
 
     shutil.rmtree(stub_dir, ignore_errors=True)
     print(json.dumps({"failures": FAILURES, "ok": not FAILURES}, indent=2))
