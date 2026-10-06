@@ -112,7 +112,7 @@ _USER_GOAL_MARKERS = (
 
 
 def _normalise(text: str) -> str:
-    return " ".join(re.sub(r"[^\\w\\s]", " ", text.lower()).split())
+    return " ".join(re.sub(r"[^\w\s]", " ", text.lower()).split())
 
 
 def _excerpt(text: str) -> str:
