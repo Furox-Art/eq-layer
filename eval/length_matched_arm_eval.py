@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
+import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -28,6 +30,15 @@ FAILURES: list[str] = []
 def check(condition: bool, message: str) -> None:
     if not condition:
         FAILURES.append(message)
+
+
+def write_stub_dir() -> str:
+    """experiment_manifest hashes the case and model files, so they must exist."""
+    directory = tempfile.mkdtemp(prefix="eq-length-matched-")
+    for name in ("cases.jsonl", "a.joblib", "s.joblib"):
+        with open(os.path.join(directory, name), "wb") as handle:
+            handle.write(name.encode("utf-8"))
+    return directory
 
 
 def main() -> int:
@@ -59,11 +70,16 @@ def main() -> int:
     check("0 question" in normal[0]["content"], "zero budget must still be stated")
 
     # Manifest must not let the three-arm design be read as a paired design.
+    stub_dir = write_stub_dir()
+    cases_path = os.path.join(stub_dir, "cases.jsonl")
+    affect_model = os.path.join(stub_dir, "a.joblib")
+    subtext_model = os.path.join(stub_dir, "s.joblib")
+
     manifest = experiment_manifest(
         n_cases=12,
-        cases_path="cases.jsonl",
-        affect_model="a.joblib",
-        subtext_model="s.joblib",
+        cases_path=cases_path,
+        affect_model=affect_model,
+        subtext_model=subtext_model,
         model=FakeModel(),
         global_seed=42,
         allow_annotations=False,
@@ -75,9 +91,9 @@ def main() -> int:
 
     paired = experiment_manifest(
         n_cases=12,
-        cases_path="cases.jsonl",
-        affect_model="a.joblib",
-        subtext_model="s.joblib",
+        cases_path=cases_path,
+        affect_model=affect_model,
+        subtext_model=subtext_model,
         model=FakeModel(),
         global_seed=42,
         allow_annotations=False,
@@ -89,6 +105,7 @@ def main() -> int:
         "length_control must state that EQ-vs-length_matched is the clean comparison",
     )
 
+    shutil.rmtree(stub_dir, ignore_errors=True)
     print(json.dumps({"failures": FAILURES, "ok": not FAILURES}, indent=2))
     return 1 if FAILURES else 0
 
