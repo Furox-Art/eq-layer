@@ -142,8 +142,14 @@ def _realization(
         and repair.active
         and repair.replacement_explicit
     )
+    repair_needs_clarification = (
+        repair is not None
+        and repair.active
+        and not repair.replacement_explicit
+    )
     question_budget = 1 if (
         explicit_replacement
+        or repair_needs_clarification
         or repair_move in {"clarify_goal", "clarify_one"}
         or (
             intent is not None
@@ -154,6 +160,7 @@ def _realization(
 
     no_guess = (
         "no_guess" in constraints
+        or repair_needs_clarification
         or (
             intent is not None
             and intent.needs_clarification
