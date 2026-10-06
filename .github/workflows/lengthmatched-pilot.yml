@@ -55,7 +55,7 @@ jobs:
             artifacts/ab_heldout_120.jsonl \
             artifacts/qwen_lm12_pairs.jsonl \
             artifacts/qwen_lm12_generation_manifest.json \
-            --model-command "python eval/hf_model_server.py --model-id Qwen/Qwen2.5-0.5B-Instruct --max-new-tokens 80 --cpu-threads 2" \
+            --model-command "python eval/hf_model_server.py --model-id Qwen/Qwen2.5-0.5B-Instruct --max-new-tokens 80 --cpu-threads 1" \
             --model-id Qwen/Qwen2.5-0.5B-Instruct \
             --affect-model artifacts/emobank_affect.joblib \
             --subtext-model artifacts/xdailydialog_subtext.joblib \
@@ -68,6 +68,12 @@ jobs:
             --length-profile shortest_complete \
             --persistent-model-command \
             --git-commit "$GITHUB_SHA"
+
+      - name: Check generation reproducibility
+        run: |
+          python eval/reproducibility_check.py \
+            --model-command "python eval/hf_model_server.py --model-id Qwen/Qwen2.5-0.5B-Instruct --max-new-tokens 80 --cpu-threads 1" \
+            --output eval/results/qwen_reproducibility.json
 
       - name: Calibrate length control profile
         run: |
@@ -100,4 +106,11 @@ jobs:
         with:
           name: eq-layer-qwen-lm12-calibration
           path: eval/results/qwen_lm12_calibration.json
+          if-no-files-found: error
+
+      - name: Upload reproducibility check
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq-layer-qwen-reproducibility
+          path: eval/results/qwen_reproducibility.json
           if-no-files-found: error

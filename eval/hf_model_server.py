@@ -21,7 +21,15 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-id", required=True)
     parser.add_argument("--max-new-tokens", type=int, default=96)
-    parser.add_argument("--cpu-threads", type=int, default=2)
+    parser.add_argument("--cpu-threads", type=int, default=1)
+    parser.add_argument(
+        "--nondeterministic",
+        action="store_true",
+        help=(
+            "Allow non-deterministic kernels. Faster, but identical inputs stop "
+            "producing identical outputs across runs."
+        ),
+    )
     args = parser.parse_args()
 
     os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
@@ -33,6 +41,17 @@ def main() -> int:
 
     transformers_logging.set_verbosity_error()
     torch.set_num_threads(max(1, args.cpu_threads))
+
+    # Greedy decoding is only deterministic given identical logits, and CPU
+    # matmul reduction order varies between runs. Two pilot runs at temperature 0
+    # with the same per-case seed produced identical text for only 8 of 12 EQ
+    # arms and 7 of 12 baseline arms, which quietly weakens any paired
+    # comparison. Single-threaded deterministic kernels cost some throughput and
+    # buy reproducibility, which is what a measurement harness needs.
+    if not args.nondeterministic:
+        torch.use_deterministic_algorithms(True)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
     tokenizer = AutoTokenizer.from_pretrained(
         args.model_id,
