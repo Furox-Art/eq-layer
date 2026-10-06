@@ -148,6 +148,29 @@ preference outcomes. The old confidence and margin fields remain serialized for
 backwards compatibility and diagnostics; they no longer choose the learned
 intent route.
 
+### Intent-risk sensitivity audit
+
+The production control path has also been run over all 120 external held-out
+cases without generating LLM responses. Under one-at-a-time ±20% perturbations
+of every non-zero loss cell, 7,332 / 7,440 routing decisions were unchanged
+(**98.55% local decision stability**).
+
+That result does **not** validate the loss matrix. Scaling the entire
+clarification-cost row changes routing substantially:
+
+- production clarification rate: **45.0%**
+- clarification cost ×0.75: **69.17%**
+- clarification cost ×1.25: **19.17%**
+- clarification cost ×1.50: **9.17%**
+
+The `task_repair` stratum is especially uncertain: 26 / 30 cases route to
+clarification (**86.67%**) with mean fused intent entropy 0.8954. This may
+reflect genuine ambiguity in repair turns, but it is not used to tune the
+matrix. The current loss table remains hand-specified and uncalibrated.
+
+Machine-readable audit:
+`eval/results/intent_risk_heldout_120_audit.json`.
+
 Explicit constraints such as `brief`, `scope_limited`, and `no_guess`
 remain deterministic because they are control requirements, not semantic
 labels.
