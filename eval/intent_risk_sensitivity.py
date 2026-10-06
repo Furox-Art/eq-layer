@@ -30,6 +30,7 @@ from eq_layer.intent_belief import DECISIONS, INTENT_LABELS, LOSS_MATRIX
 
 
 DEFAULT_MULTIPLIERS = (0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5)
+DEFAULT_CELL_FACTORS = (0.8, 1.2)
 
 
 def load_jsonl(path: str | Path) -> list[dict]:
@@ -55,8 +56,20 @@ def decide_from_mapping(
     belief: dict[str, float],
     *,
     clarify_multiplier: float = 1.0,
+    loss_matrix: dict[str, dict[str, float]] | None = None,
 ) -> tuple[str, float]:
-    matrix = scaled_loss_matrix(clarify_multiplier)
+    if loss_matrix is not None and clarify_multiplier != 1.0:
+        raise ValueError(
+            "Pass either loss_matrix or clarify_multiplier, not both."
+        )
+    matrix = (
+        {
+            decision: dict(costs)
+            for decision, costs in loss_matrix.items()
+        }
+        if loss_matrix is not None
+        else scaled_loss_matrix(clarify_multiplier)
+    )
     probabilities = {
         label: max(0.0, float(belief.get(label, 0.0)))
         for label in INTENT_LABELS
@@ -92,6 +105,148 @@ def decide_from_mapping(
         else next(decision for decision in DECISIONS if decision in winners)
     )
     return chosen, round(losses[chosen], 6)
+
+
+def perturbed_loss_matrix(
+    decision: str,
+    label: str,
+    factor: float,
+) -> dict[str, dict[str, float]]:
+    if decision not in LOSS_MATRIX:
+        raise ValueError(f"Unsupported decision: {decision}")
+    if label not in INTENT_LABELS:
+        raise ValueError(f"Unsupported intent label: {label}")
+    if factor <= 0:
+        raise ValueError("Cell perturbation factor must be > 0.")
+
+    matrix = {
+        row: dict(costs)
+        for row, costs in LOSS_MATRIX.items()
+    }
+    matrix[decision][label] *= factor
+    return matrix
+
+
+def cellwise_robustness(
+    rows: list[dict],
+    *,
+    factors: tuple[float, ...] = DEFAULT_CELL_FACTORS,
+) -> dict:
+    """Measure local routing stability under one-at-a-time loss perturbations.
+
+    Every non-zero production loss cell is scaled by each requested factor while
+    all other cells remain fixed. This is a local robustness audit, not a search
+    for a better loss matrix.
+    """
+
+    perturbations = [
+        (decision, label, factor)
+        for decision in DECISIONS
+        for label in INTENT_LABELS
+        if LOSS_MATRIX[decision][label] != 0.0
+        for factor in factors
+    ]
+
+    influence = Counter()
+    case_reports = []
+    strata = defaultdict(list)
+
+    for row in rows:
+        belief = row["fused_belief"]
+        production = row["fused_action"]
+        flips = []
+
+        for decision, label, factor in perturbations:
+            matrix = perturbed_loss_matrix(decision, label, factor)
+            action, _ = decide_from_mapping(
+                belief,
+                loss_matrix=matrix,
+            )
+            if action != production:
+                key = f"{decision}:{label}x{factor:g}"
+                flips.append(
+                    {
+                        "perturbation": key,
+                        "action": action,
+                    }
+                )
+                influence[key] += 1
+
+        report = {
+            "id": row["id"],
+            "stratum": row["stratum"],
+            "production_action": production,
+            "flips": len(flips),
+            "perturbations": len(perturbations),
+            "flip_rate": (
+                round(len(flips) / len(perturbations), 4)
+                if perturbations
+                else 0.0
+            ),
+            "sensitive_perturbations": flips,
+        }
+        case_reports.append(report)
+        strata[row["stratum"]].append(report)
+
+    total_decisions = len(case_reports) * len(perturbations)
+    total_flips = sum(report["flips"] for report in case_reports)
+
+    by_stratum = {}
+    for stratum, items in sorted(strata.items()):
+        possible = len(items) * len(perturbations)
+        flips = sum(item["flips"] for item in items)
+        by_stratum[stratum] = {
+            "n": len(items),
+            "flips": flips,
+            "decisions_tested": possible,
+            "decision_stability_rate": (
+                round(1.0 - flips / possible, 4)
+                if possible
+                else 1.0
+            ),
+            "brittle_case_ids": [
+                item["id"]
+                for item in items
+                if item["flips"] > 0
+            ],
+        }
+
+    return {
+        "factors": list(factors),
+        "nonzero_cells": sum(
+            LOSS_MATRIX[decision][label] != 0.0
+            for decision in DECISIONS
+            for label in INTENT_LABELS
+        ),
+        "perturbations_per_case": len(perturbations),
+        "decisions_tested": total_decisions,
+        "total_flips": total_flips,
+        "decision_stability_rate": (
+            round(1.0 - total_flips / total_decisions, 4)
+            if total_decisions
+            else 1.0
+        ),
+        "fully_stable_cases": sum(
+            report["flips"] == 0
+            for report in case_reports
+        ),
+        "by_stratum": by_stratum,
+        "most_influential_perturbations": [
+            {
+                "perturbation": key,
+                "flip_count": count,
+            }
+            for key, count in sorted(
+                influence.items(),
+                key=lambda item: (-item[1], item[0]),
+            )
+        ],
+        "cases": case_reports,
+        "guardrail": (
+            "Local one-cell-at-a-time perturbations are a robustness diagnostic, "
+            "not evidence that the hand-specified loss matrix is optimal."
+        ),
+    }
 
 
 def source_map(heldout: list[dict] | None) -> dict[str, dict]:
@@ -143,6 +298,7 @@ def audit(
                 "fused_action": base_action,
                 "fused_expected_loss": base_loss,
                 "entropy": generation.get("intent_belief_entropy"),
+                "fused_belief": dict(fused),
                 "actions_by_multiplier": {
                     str(multiplier): decide_from_mapping(
                         fused,
@@ -210,6 +366,8 @@ def audit(
             ),
         }
 
+    robustness = cellwise_robustness(rows)
+
     raw_to_fused_flips = sum(
         row["raw_action"] is not None
         and row["raw_action"] != row["fused_action"]
@@ -229,6 +387,7 @@ def audit(
         "raw_to_fused_action_flips": raw_to_fused_flips,
         "by_stratum": by_stratum,
         "clarify_cost_sensitivity": by_multiplier,
+        "cellwise_loss_robustness": robustness,
         "interpretation_guardrail": (
             "This audit measures routing sensitivity only. It does not identify "
             "an optimal loss matrix and must not be tuned against blinded human "
