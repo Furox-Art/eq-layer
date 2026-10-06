@@ -19,6 +19,7 @@ So this repo does not retrain the model. It adds a layer:
 4. **Policy selection** — affect and intent jointly choose a response-policy family (`mirror`, `direct`, `repair`, `hold`, `boundary`, ...). Selection is a discrete decision, not generation.
 5. **Factored action compilation** — the selected policy is split into orthogonal controls: `task_move`, `social_move`, `repair_move`, and `realization`. The task is driven primarily by user intent, so affective adaptation cannot silently replace what the user actually asked for.
 6. **Steering** — the factored action, source policy, repair state, interaction quality, and canonical request are injected into the decode path so the control decision actually lands in the tokens.
+7. **Structural response audit** — the generated response is checked against inspectable control contracts such as question budget, required clarification, unsupported privacy promises, unknown-stance admissions, repair repetition, and low-verbosity overruns. This is not a factual truth checker.
 
 ## Prior art and novelty boundary
 
@@ -292,6 +293,30 @@ as an independent case.
 The harness does **not** manufacture a result: response generation and human
 ratings must come from a real pre-registered comparison.
 
+### Passive response auditor
+
+A generated EQ response is also inspected by `ResponseAuditor`. The A/B
+generation pipeline records the result under `generation.response_audit` and
+the manifest records `response_auditor_mode=passive-metadata-only`.
+
+The auditor currently checks only structurally observable control violations:
+
+- empty response;
+- question-budget overrun;
+- missing required clarification;
+- unsupported absolute privacy promise;
+- `stance=unknown` combined with an explicit "you are right / I was wrong"
+  admission;
+- near-duplicate recent assistant responses;
+- repeated prior answer while a repair is active;
+- large low-verbosity overruns.
+
+It does **not** decide whether factual claims are true, whether the user's
+position is correct, or whether advice is substantively good. Hard audit
+failures currently request regeneration in metadata only; automatic
+regeneration is deliberately disabled in the A/B experiment so the evaluation
+protocol is not silently changed.
+
 ## Selection
 
 Policies declare preconditions, and the most constrained applicable policy
@@ -319,6 +344,7 @@ keywords genuinely cannot recover — exhaustion is the current example.
 eq_layer/
   policies.py      joint affect/intent policy taxonomy + selector
   actions.py       task/social/repair/realization factorization
+  auditor.py       structural post-generation control-contract audit
   interaction.py   structural repair lifecycle + interaction-quality state
   affect.py           affect-state tracker interface + zero-dependency structural fallback
   trained_affect.py   learned VAD regressor + multi-turn affect adapter
