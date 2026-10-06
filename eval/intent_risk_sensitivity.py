@@ -32,6 +32,21 @@ from eq_layer.intent_belief import DECISIONS, INTENT_LABELS, LOSS_MATRIX
 DEFAULT_MULTIPLIERS = (0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5)
 DEFAULT_CELL_FACTORS = (0.8, 1.2)
 
+GROUPED_COST_SCENARIOS = {
+    "clarification_cost": tuple(
+        ("clarify", label)
+        for label in INTENT_LABELS
+    ),
+    "action_vs_statement_mismatch": (
+        ("action_request", "statement"),
+        ("statement", "action_request"),
+    ),
+    "status_vs_question_mismatch": (
+        ("status_check", "question"),
+        ("question", "status_check"),
+    ),
+}
+
 
 def load_jsonl(path: str | Path) -> list[dict]:
     with open(path, encoding="utf-8") as fh:
@@ -249,6 +264,87 @@ def cellwise_robustness(
     }
 
 
+def grouped_loss_matrix(
+    cells: tuple[tuple[str, str], ...],
+    factor: float,
+) -> dict[str, dict[str, float]]:
+    """Scale one named cost group while preserving every other loss cell."""
+
+    if factor <= 0:
+        raise ValueError("Grouped perturbation factor must be > 0.")
+
+    matrix = {
+        decision: dict(costs)
+        for decision, costs in LOSS_MATRIX.items()
+    }
+    for decision, label in cells:
+        if decision not in LOSS_MATRIX:
+            raise ValueError(f"Unsupported decision: {decision}")
+        if label not in INTENT_LABELS:
+            raise ValueError(f"Unsupported intent label: {label}")
+        matrix[decision][label] *= factor
+    return matrix
+
+
+def grouped_cost_sensitivity(
+    rows: list[dict],
+    *,
+    factors: tuple[float, ...] = DEFAULT_CELL_FACTORS,
+) -> dict:
+    """Stress-test the three pre-specified grouped cost perturbations.
+
+    These grouped ±20% perturbations answer a different question from the
+    one-cell-at-a-time audit: they test whether coherent changes to a semantic
+    cost family alter routing. They are diagnostics only and must not be used
+    to tune on this held-out set.
+    """
+
+    scenarios: dict[str, dict] = {}
+
+    for scenario, cells in GROUPED_COST_SCENARIOS.items():
+        factor_reports: dict[str, dict] = {}
+        for factor in factors:
+            matrix = grouped_loss_matrix(cells, factor)
+            actions: list[str] = []
+            flip_case_ids: list[str] = []
+
+            for row in rows:
+                action, _ = decide_from_mapping(
+                    row["fused_belief"],
+                    loss_matrix=matrix,
+                )
+                actions.append(action)
+                if action != row["fused_action"]:
+                    flip_case_ids.append(row["id"])
+
+            factor_reports[str(factor)] = {
+                "cells": [
+                    f"{decision}:{label}"
+                    for decision, label in cells
+                ],
+                "action_counts": dict(Counter(actions)),
+                "flips_vs_production": len(flip_case_ids),
+                "flip_rate": (
+                    round(len(flip_case_ids) / len(rows), 4)
+                    if rows
+                    else 0.0
+                ),
+                "flip_case_ids": flip_case_ids,
+            }
+
+        scenarios[scenario] = factor_reports
+
+    return {
+        "factors": list(factors),
+        "scenarios": scenarios,
+        "guardrail": (
+            "Grouped cost perturbations are pre-specified robustness stress tests. "
+            "They do not validate, calibrate, or optimize the hand-specified loss "
+            "matrix, and they must not be tuned against this held-out set."
+        ),
+    }
+
+
 def source_map(heldout: list[dict] | None) -> dict[str, dict]:
     if not heldout:
         return {}
@@ -367,6 +463,7 @@ def audit(
         }
 
     robustness = cellwise_robustness(rows)
+    grouped_sensitivity = grouped_cost_sensitivity(rows)
 
     raw_to_fused_flips = sum(
         row["raw_action"] is not None
@@ -388,6 +485,7 @@ def audit(
         "by_stratum": by_stratum,
         "clarify_cost_sensitivity": by_multiplier,
         "cellwise_loss_robustness": robustness,
+        "grouped_cost_sensitivity": grouped_sensitivity,
         "interpretation_guardrail": (
             "This audit measures routing sensitivity only. It does not identify "
             "an optimal loss matrix and must not be tuned against blinded human "
