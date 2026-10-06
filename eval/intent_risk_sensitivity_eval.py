@@ -100,6 +100,28 @@ def main() -> int:
     if set(robustness["by_stratum"]) != {"empathetic", "task_general"}:
         raise AssertionError(robustness["by_stratum"])
 
+    grouped = report["grouped_cost_sensitivity"]
+    if grouped["factors"] != [0.8, 1.2]:
+        raise AssertionError(grouped["factors"])
+    expected_scenarios = {
+        "clarification_cost",
+        "action_vs_statement_mismatch",
+        "status_vs_question_mismatch",
+    }
+    if set(grouped["scenarios"]) != expected_scenarios:
+        raise AssertionError(grouped["scenarios"])
+    for scenario in expected_scenarios:
+        factors = grouped["scenarios"][scenario]
+        if set(factors) != {"0.8", "1.2"}:
+            raise AssertionError(factors)
+        for result in factors.values():
+            if not result["cells"]:
+                raise AssertionError(result)
+            if not (0 <= result["flips_vs_production"] <= report["n_cases"]):
+                raise AssertionError(result)
+            if not (0.0 <= result["flip_rate"] <= 1.0):
+                raise AssertionError(result)
+
     print("intent risk sensitivity audit: pass")
     return 0
 
