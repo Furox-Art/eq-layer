@@ -279,3 +279,43 @@ def audit_from_generation_metadata(
         previous_assistant_responses=previous,
     )
     return ResponseAuditor().audit(response, context)
+
+
+REGENERATION_GUIDANCE = {
+    "empty_response": "Return a non-empty response that follows the control action.",
+    "question_budget_exceeded": "Do not exceed the allowed number of questions.",
+    "missing_required_clarification": "Ask exactly one targeted clarification question before guessing.",
+    "absolute_privacy_promise": "Do not promise absolute privacy or confidentiality.",
+    "unsupported_stance_admission": (
+        "Do not claim that the user is right or that the assistant was wrong "
+        "when factual stance is unknown."
+    ),
+    "repair_repeats_prior_answer": (
+        "Do not repeat the prior answer; repair the specific misunderstanding."
+    ),
+}
+
+
+def regeneration_instruction(audit: ResponseAudit) -> str:
+    """Build a minimal one-shot repair instruction from hard audit failures."""
+
+    hard_codes = [
+        issue.code
+        for issue in audit.issues
+        if issue.severity == "hard"
+    ]
+    guidance = [
+        REGENERATION_GUIDANCE[code]
+        for code in hard_codes
+        if code in REGENERATION_GUIDANCE
+    ]
+    if not guidance:
+        return ""
+
+    bullets = "\n".join(f"- {item}" for item in dict.fromkeys(guidance))
+    return (
+        "The previous draft violated EQ-Layer structural control contracts. "
+        "Regenerate the answer once using the same user context and original "
+        "task. Correct only the listed violations; do not invent new facts.\n"
+        + bullets
+    )
