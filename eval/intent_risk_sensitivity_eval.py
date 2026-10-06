@@ -86,6 +86,20 @@ def main() -> int:
     if "1.5" not in report["clarify_cost_sensitivity"]:
         raise AssertionError("Sensitivity multiplier missing.")
 
+    robustness = report["cellwise_loss_robustness"]
+    if robustness["nonzero_cells"] <= 0:
+        raise AssertionError("No non-zero loss cells were audited.")
+    if robustness["perturbations_per_case"] != 2 * robustness["nonzero_cells"]:
+        raise AssertionError(robustness)
+    if robustness["decisions_tested"] != (
+        report["n_cases"] * robustness["perturbations_per_case"]
+    ):
+        raise AssertionError(robustness)
+    if not (0.0 <= robustness["decision_stability_rate"] <= 1.0):
+        raise AssertionError(robustness["decision_stability_rate"])
+    if set(robustness["by_stratum"]) != {"empathetic", "task_general"}:
+        raise AssertionError(robustness["by_stratum"])
+
     print("intent risk sensitivity audit: pass")
     return 0
 
