@@ -1,0 +1,47 @@
+name: Create GitHub Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".release-request"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify requested version
+        id: version
+        run: |
+          requested="$(tr -d '[:space:]' < .release-request)"
+          actual="$(python - <<'PY'
+          import tomllib
+          with open("pyproject.toml", "rb") as fh:
+              print(tomllib.load(fh)["project"]["version"])
+          PY
+          )"
+          test "$requested" = "$actual"
+          echo "version=$actual" >> "$GITHUB_OUTPUT"
+      - name: Create GitHub Release if missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "Release v$VERSION already exists."
+          else
+            gh release create "v$VERSION" \
+              --target "${GITHUB_SHA}" \
+              --title "v$VERSION" \
+              --generate-notes
+          fi
+      - name: Dispatch PyPI publisher explicitly
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: gh workflow run release.yml -f "version=$VERSION"
