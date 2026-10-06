@@ -678,6 +678,15 @@ def experiment_manifest(
     length_profiles: tuple[str, ...] = (),
 ) -> dict:
     profiles = list(length_profiles)
+    # Reject unknown names here as well as at generation time. The manifest is the
+    # record other people read, so an unresolvable profile must not be written
+    # into it and left to fail later.
+    unknown = [name for name in profiles if name not in LENGTH_CONTROL_PROFILES]
+    if unknown:
+        raise ValueError(
+            f"Unknown length profile(s) {unknown}; expected one of "
+            f"{sorted(LENGTH_CONTROL_PROFILES)}"
+        )
     arms = (
         ["baseline", "eq"]
         + [f"length_matched:{name}" for name in profiles]
