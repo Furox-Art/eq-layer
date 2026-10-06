@@ -34,6 +34,7 @@ jobs:
   publish-pypi:
     needs: build-python
     runs-on: ubuntu-latest
+    environment: pypi
     steps:
       - uses: actions/download-artifact@v4
         with:
