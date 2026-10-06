@@ -52,9 +52,10 @@ def main() -> int:
 
     check(report["n_cases"] == 2, "n_cases should count rows")
     check(report["arms_present"] == ["baseline", "eq", "length_matched"], "all three arms should be found")
+    # 30/90 and 20/60 words: both rows are exactly one third.
     check(
-        abs(report["ratios"]["eq_vs_baseline"]["words"] - 0.5) < 0.01,
-        f"eq_vs_baseline should be 0.5, got {report['ratios']['eq_vs_baseline']['words']}",
+        abs(report["ratios"]["eq_vs_baseline"]["words"] - 0.333) < 0.005,
+        f"eq_vs_baseline should be ~0.333, got {report['ratios']['eq_vs_baseline']['words']}",
     )
     check(
         report["ratios"]["eq_vs_length_matched"]["words"] == 1.0,
@@ -87,9 +88,16 @@ def main() -> int:
     )
     check(dirty["cases_missing_an_arm"] == ["b"], f"missing arm should be named, got {dirty['cases_missing_an_arm']}")
     check(dirty["cases_with_empty_arm"] == ["c"], f"empty arm should be named, got {dirty['cases_with_empty_arm']}")
+    # baseline is present in all three rows: a has it, b has it but no eq, c has
+    # it as an empty string. An empty string is still a present arm, which is
+    # exactly why cases_with_empty_arm has to name it.
     check(
-        dirty["totals"]["words"]["baseline"]["n"] == 2,
-        "an empty string still counts as a present arm but must be flagged",
+        dirty["totals"]["words"]["baseline"]["n"] == 3,
+        f"baseline present in all 3 rows, got n={dirty['totals']['words']['baseline']['n']}",
+    )
+    check(
+        dirty["totals"]["words"]["eq"]["n"] == 2,
+        f"eq present in a and c only, got n={dirty['totals']['words']['eq']['n']}",
     )
 
     print(json.dumps({"failures": FAILURES, "ok": not FAILURES}, indent=2))
