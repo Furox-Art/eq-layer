@@ -23,6 +23,7 @@ import io
 import json
 import random
 import re
+import sys
 import tarfile
 import urllib.request
 from collections import defaultdict
@@ -244,6 +245,36 @@ def deterministic_sample(rows: list[dict], n: int, seed: int) -> list[dict]:
     return sorted(picked, key=lambda row: row["source_id"])
 
 
+# A stratum should keep at least this multiple of its quota in reserve. Below
+# that, the frozen set still builds, but each further tightening of a detector
+# eats diversity silently until the pool drops under the quota and the build
+# hard-fails.
+MIN_POOL_HEADROOM_FACTOR = 2.0
+
+
+def sampling_margins(pools: dict[str, tuple[int, int]]) -> dict:
+    """Report how much of each candidate pool the frozen set consumes.
+
+    The failure this guards against is silent: a stratum that samples most of
+    its pool produces a perfectly valid 120-case file while its real diversity
+    is far lower than the case count suggests.
+    """
+    report: dict[str, dict] = {}
+    for stratum, (pool, drawn) in sorted(pools.items()):
+        report[stratum] = {
+            "candidates": pool,
+            "drawn": drawn,
+            "headroom": pool - drawn,
+            "draw_ratio": round(drawn / pool, 4) if pool else None,
+            "narrow_pool": bool(pool < drawn * MIN_POOL_HEADROOM_FACTOR),
+        }
+    return report
+
+
+def narrow_strata(margins: dict[str, dict]) -> list[str]:
+    return sorted(name for name, row in margins.items() if row["narrow_pool"])
+
+
 def build(seed: int = 20261005) -> tuple[list[dict], dict]:
     empathetic_archive = download(EMPATHETIC_URL)
     tm_blobs = [
@@ -314,6 +345,13 @@ def build(seed: int = 20261005) -> tuple[list[dict], dict]:
                 "general_candidate_count": len(general),
             },
         },
+        "sampling_margins": sampling_margins(
+            {
+                "empathetic": (len(empathetic), 60),
+                "task_repair": (len(repair), 30),
+                "task_general": (len(general), 30),
+            }
+        ),
         "selection_rule": (
             "Deterministic sampling from external corpora; each case is a "
             "conversation prefix ending in a user turn with the human reference "
@@ -351,6 +389,25 @@ def main() -> int:
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+    narrow = narrow_strata(manifest["sampling_margins"])
+    if narrow:
+        for stratum in narrow:
+            row = manifest["sampling_margins"][stratum]
+            print(
+                f"WARNING narrow candidate pool: stratum={stratum} "
+                f"candidates={row['candidates']} drawn={row['drawn']} "
+                f"draw_ratio={row['draw_ratio']} (min factor "
+                f"{MIN_POOL_HEADROOM_FACTOR}) — case diversity for this stratum is "
+                f"bounded by pool size, not by the {row['drawn']} drawn cases",
+                file=sys.stderr,
+            )
+        print(
+            "WARNING this is reported, not enforced: the build still succeeds. "
+            "Relax the detector or lower the stratum quota deliberately rather "
+            "than letting the pool shrink unnoticed.",
+            file=sys.stderr,
+        )
 
     print(json.dumps(manifest, indent=2))
     return 0
