@@ -460,6 +460,33 @@ class FullEQPipeline:
         return steered, metadata
 
 
+# Surface-form limits expressed without any policy content. Used to build the
+# length-matched control arm: the model is asked for the same amount of text it
+# is asked for in the EQ arm, but receives no affect, intent, task or repair
+# decision. Without it, EQ-vs-baseline measures length as much as steering.
+LENGTH_CONTROL_INSTRUCTION = (
+    "Keep the reply short. Use at most {question_budget} question(s), and do not "
+    "restate the conversation, add preamble, or add offers of further help. "
+    "Answer directly in as few sentences as the request needs."
+)
+
+
+def build_length_matched_messages(
+    messages: list[dict],
+    realization: dict,
+) -> list[dict]:
+    """Baseline arm with only the surface budget pinned, not the EQ policy."""
+    budget = realization.get("question_budget", 0)
+    instruction = LENGTH_CONTROL_INSTRUCTION.format(question_budget=budget)
+    if realization.get("verbosity") != "low":
+        instruction = (
+            "Answer directly in as few sentences as the request needs. "
+            "Use at most "
+            f"{budget} question(s), and do not add preamble or offers of further help."
+        )
+    return [{"role": "system", "content": instruction}, *messages]
+
+
 def generate_pairs(
     cases: Iterable[dict],
     *,
@@ -468,6 +495,7 @@ def generate_pairs(
     seed: int = 0,
     allow_annotations: bool = False,
     auditor_regenerations: int = 0,
+    length_matched_arm: bool = False,
 ) -> list[dict]:
     if auditor_regenerations not in {0, 1}:
         raise ValueError("auditor_regenerations must be 0 or 1.")
@@ -494,12 +522,20 @@ def generate_pairs(
             )
 
             pair_seed = stable_case_seed(seed, case_id)
-            conditions = ["baseline", "eq"]
+            conditions = ["baseline", "eq", "length_matched"] if length_matched_arm else ["baseline", "eq"]
             rng.shuffle(conditions)
             responses: dict[str, str] = {}
 
             for condition in conditions:
-                condition_messages = messages if condition == "baseline" else eq_messages
+                if condition == "baseline":
+                    condition_messages = messages
+                elif condition == "eq":
+                    condition_messages = eq_messages
+                else:
+                    condition_messages = build_length_matched_messages(
+                        messages,
+                        (eq_meta.get("factored_action") or {}).get("realization") or {},
+                    )
                 responses[condition] = model.generate(
                     condition_messages,
                     seed=pair_seed,
@@ -557,6 +593,8 @@ def generate_pairs(
             }
             if regeneration_count:
                 record["eq_initial"] = initial_eq
+            if length_matched_arm:
+                record["length_matched"] = responses["length_matched"]
 
             output.append(record)
     finally:
@@ -575,9 +613,14 @@ def experiment_manifest(
     allow_annotations: bool,
     git_commit: str | None = None,
     auditor_regenerations: int = 0,
+    length_matched_arm: bool = False,
 ) -> dict:
     return {
-        "design": "same-base-model paired baseline-vs-eq-layer",
+        "design": (
+            "same-base-model three-arm baseline-vs-length-matched-vs-eq-layer"
+            if length_matched_arm
+            else "same-base-model paired baseline-vs-eq-layer"
+        ),
         "model_id": model.model_id,
         "model_command_executable": model.command[0],
         "model_command_argv_sha256": hashlib.sha256(
@@ -599,8 +642,22 @@ def experiment_manifest(
         "subtext_model_sha256": file_sha256(subtext_model),
         "eq_layer_git_commit": git_commit,
         "pairing_rule": "same model id, same sampling temperature, same per-case seed",
+        "arms": ["baseline", "eq", "length_matched"] if length_matched_arm else ["baseline", "eq"],
+        "length_matched_arm": length_matched_arm,
         "arm_difference": (
             "EQ arm prepends only the EQ-Layer system control instruction; "
             "the original transcript is preserved identically in both arms."
+        ),
+        "length_control": (
+            "The length-matched arm pins only the surface budget (verbosity, "
+            "question_budget) with no affect, intent, task or repair decision. "
+            "EQ-vs-length_matched isolates the deterministic policy contribution; "
+            "EQ-vs-baseline does not, because the EQ arm runs roughly 3x shorter "
+            "than the unconstrained baseline."
+        ),
+        "claim_boundary": (
+            "EQ-vs-baseline mixes the deterministic decision with the surface budget "
+            "it implies. Only EQ-vs-length_matched measures the deterministic layer "
+            "alone. Report both."
         ),
     }

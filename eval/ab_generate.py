@@ -57,6 +57,16 @@ def main() -> int:
         default=0,
         help="Engineering mode: allow at most one EQ retry after a hard structural audit failure.",
     )
+    parser.add_argument(
+        "--length-matched-arm",
+        action="store_true",
+        help=(
+            "Add a third arm that pins only the surface budget (verbosity, "
+            "question_budget) and receives no EQ-Layer decision. EQ-vs-length_matched "
+            "isolates the deterministic policy contribution from the length confound; "
+            "EQ-vs-baseline does not."
+        ),
+    )
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--timeout-seconds", type=int, default=120)
     parser.add_argument(
@@ -142,6 +152,7 @@ def main() -> int:
         seed=args.seed,
         allow_annotations=args.allow_oracle_annotations,
         auditor_regenerations=args.auditor_regenerations,
+        length_matched_arm=args.length_matched_arm,
     )
     write_jsonl(args.pairs, pairs)
 
@@ -155,6 +166,7 @@ def main() -> int:
         allow_annotations=args.allow_oracle_annotations,
         git_commit=args.git_commit,
         auditor_regenerations=args.auditor_regenerations,
+        length_matched_arm=args.length_matched_arm,
     )
     manifest["development_cases_allowed"] = args.allow_development_cases
     manifest["final_mode"] = args.final
@@ -164,6 +176,7 @@ def main() -> int:
     manifest["selected_strata"] = stratum_counts(cases)
     manifest["persistent_model_command"] = args.persistent_model_command
     manifest["auditor_regenerations"] = args.auditor_regenerations
+    manifest["length_matched_arm"] = args.length_matched_arm
 
     with open(args.manifest, "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, ensure_ascii=False, indent=2)

@@ -61,6 +61,8 @@ jobs:
         run: python eval/heldout_sampling_margin_eval.py
       - name: Run routing scorer exclusion test
         run: python eval/route_score_eval.py
+      - name: Run length-matched control arm test
+        run: python eval/length_matched_arm_eval.py
       - name: Run response auditor test
         run: python eval/response_auditor_eval.py
       - name: Run response experiment engine smoke test
