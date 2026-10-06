@@ -189,10 +189,18 @@ POLICIES: tuple[Policy, ...] = (
     Policy(
         name="ask_one_question",
         register=Register.ASK,
-        summary="After a correction, ask exactly one question — the one that unblocks the next step.",
+        summary=(
+            "After a correction, apply an explicit replacement immediately and resume "
+            "the prior task. Ask at most one targeted question only when the replacement "
+            "is missing or ambiguous."
+        ),
         preconditions=("subtext:correction",),
-        avoid=("Three or more questions.", "Questions stacked into an interrogation."),
-        example_opener="Ne demek istediğini yanlış yakalamışım. Hangi sürümü kastediyorsun?",
+        avoid=(
+            "Asking the user to repeat or reconfirm a replacement they already supplied.",
+            "Three or more questions.",
+            "Questions stacked into an interrogation.",
+        ),
+        example_opener="Düzeltmeyi aldım; verdiğin yeni değeri önceki adıma uyguluyorum.",
     ),
     Policy(
         name="repair_hold_position",
