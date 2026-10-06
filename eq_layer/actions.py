@@ -38,7 +38,16 @@ class FactoredAction:
         return asdict(self)
 
 
-def _task_move(intent: IntentState | None, policy: Policy) -> str:
+def _task_move(
+    intent: IntentState | None,
+    policy: Policy,
+    repair: RepairState | None = None,
+) -> str:
+    if repair is not None and repair.active:
+        if repair.replacement_explicit:
+            return "resume_prior_task_with_correction"
+        return "clarify_correction"
+
     if intent is not None:
         if intent.needs_clarification:
             return "clarify_goal"
@@ -82,11 +91,15 @@ def _repair_move(policy: Policy, repair: RepairState | None) -> str:
     base = REPAIR_MOVES.get(policy.name, "none")
     if repair is None or not repair.active:
         return base
+    if repair.replacement_explicit:
+        if repair.repeated:
+            return "stop_restatement_and_apply_correction"
+        return "apply_correction"
     if repair.repeated:
         return "stop_restatement_and_repair"
     if base != "none":
         return base
-    return "repair_targeted"
+    return "clarify_one"
 
 
 def _realization(
@@ -124,14 +137,28 @@ def _realization(
         directness = "high"
         warmth = "low"
 
+    explicit_replacement = (
+        repair is not None
+        and repair.active
+        and repair.replacement_explicit
+    )
     question_budget = 1 if (
-        repair_move in {"clarify_goal", "clarify_one"}
-        or (intent is not None and intent.needs_clarification)
+        explicit_replacement
+        or repair_move in {"clarify_goal", "clarify_one"}
+        or (
+            intent is not None
+            and intent.needs_clarification
+            and not explicit_replacement
+        )
     ) else 0
 
     no_guess = (
         "no_guess" in constraints
-        or (intent is not None and intent.needs_clarification)
+        or (
+            intent is not None
+            and intent.needs_clarification
+            and not explicit_replacement
+        )
     )
 
     # An active correction identifies a repair target, but does not prove the
@@ -158,7 +185,7 @@ def compose_action(
 ) -> FactoredAction:
     """Compile policy + intent + dialogue-health state into orthogonal controls."""
 
-    task_move = _task_move(intent, policy)
+    task_move = _task_move(intent, policy, repair)
     if policy.name == "boundary":
         task_move = "set_boundary"
 
