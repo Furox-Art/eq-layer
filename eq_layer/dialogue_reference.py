@@ -73,16 +73,8 @@ _ASSISTANT_OFFER_MARKERS = (
     "yapabiliriz",
     "devam edebilirim",
     "geçebilirim",
-    "sıradaki adım",
-    "sonraki adım",
-    "sıradaki işlem",
-    "sonraki işlem",
-    "i can",
-    "i could",
     "would you like me to",
     "shall i",
-    "next i can",
-    "next step",
 )
 
 _USER_GOAL_MARKERS = (
@@ -141,10 +133,29 @@ def _contains_phrase(text: str, phrase: str) -> bool:
     return f" {needle} " in f" {normalised} "
 
 
+_ENGLISH_OFFER_ACTION_RE = re.compile(
+    r"\b(?:i can|i could)\s+"
+    r"(?:add|check|run|fix|review|test|continue|create|generate|compare|"
+    r"audit|search|inspect|update|remove|write|draft|explain|summarize|"
+    r"summarise|analyze|analyse|rerun|evaluate|help)\b",
+    re.IGNORECASE,
+)
+
+_NEXT_STEP_OFFER_RE = re.compile(
+    r"\b(?:next step|sıradaki adım|sonraki adım)\s*[:\-]",
+    re.IGNORECASE,
+)
+
+
 def _has_offer(text: str) -> bool:
-    return any(
+    if any(
         _contains_phrase(text, marker)
         for marker in _ASSISTANT_OFFER_MARKERS
+    ):
+        return True
+    return bool(
+        _ENGLISH_OFFER_ACTION_RE.search(text)
+        or _NEXT_STEP_OFFER_RE.search(text)
     )
 
 
