@@ -74,6 +74,56 @@ def main() -> int:
     if correction.realization.question_budget != 1:
         raise AssertionError("Correction repair must allow exactly one question.")
 
+    # An explicit correction replacement outranks latest-turn intent ambiguity.
+    explicit_repair = RepairState(
+        active=True,
+        kind="user_corrects_assistant",
+        target_turn_index=0,
+        correction_excerpt="No, I said I want to watch Dolittle.",
+        replacement_excerpt="I want to watch Dolittle",
+        replacement_explicit=True,
+        confidence=1.0,
+        evidence=("test",),
+    )
+    explicit_action = compose_action(
+        REGISTRY["ask_one_question"],
+        intent("unknown", clarify=True),
+        repair=explicit_repair,
+    )
+    if explicit_action.task_move != "resume_prior_task_with_correction":
+        raise AssertionError(
+            f"Explicit repair replacement did not preserve task progress: {explicit_action}"
+        )
+    if explicit_action.repair_move != "apply_correction":
+        raise AssertionError(
+            f"Explicit repair was not applied directly: {explicit_action}"
+        )
+    if explicit_action.realization.question_budget != 1:
+        raise AssertionError("Corrected task must retain at most one next-step question.")
+
+    missing_repair = RepairState(
+        active=True,
+        kind="user_corrects_assistant",
+        target_turn_index=0,
+        correction_excerpt="I didn't say that.",
+        replacement_explicit=False,
+        confidence=1.0,
+        evidence=("test",),
+    )
+    missing_action = compose_action(
+        REGISTRY["ask_one_question"],
+        intent("unknown", clarify=True),
+        repair=missing_repair,
+    )
+    if missing_action.task_move != "clarify_correction":
+        raise AssertionError(
+            f"Missing replacement did not request correction clarification: {missing_action}"
+        )
+    if missing_action.repair_move != "clarify_one":
+        raise AssertionError(
+            f"Missing replacement did not compile to one clarification: {missing_action}"
+        )
+
     # Intent-level ambiguity gets one targeted clarification even without a repair label.
     ambiguous = compose_action(
         REGISTRY["mirror_specific"],
@@ -141,6 +191,31 @@ def main() -> int:
     missing = [value for value in required if value not in instruction]
     if missing:
         raise AssertionError(f"Factored controls missing from steering: {missing}")
+
+    repaired_steer = Steer.build(
+        REGISTRY["ask_one_question"],
+        intent("unknown", clarify=True),
+        repair=explicit_repair,
+    )
+    repaired_instruction = repaired_steer.system_instruction()
+    required_repair_text = (
+        "task_move: resume_prior_task_with_correction",
+        "repair_move: apply_correction",
+        "Explicit correction replacement",
+        "Do not ask the user to repeat or reconfirm",
+    )
+    missing_repair_text = [
+        value for value in required_repair_text
+        if value not in repaired_instruction
+    ]
+    if missing_repair_text:
+        raise AssertionError(
+            f"Replacement-aware repair steering is incomplete: {missing_repair_text}"
+        )
+    if "Do not guess the missing referent. Ask exactly one targeted question." in repaired_instruction:
+        raise AssertionError(
+            "Explicit replacement still triggered generic intent clarification."
+        )
 
     print("factored action architecture: pass")
     return 0
