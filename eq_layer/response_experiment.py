@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
-from .auditor import audit_from_generation_metadata
+from .auditor import audit_from_generation_metadata, regeneration_instruction
 from .policies import Selector
 from .steer import Steer
 from .tracker import ConversationTracker
@@ -438,7 +438,11 @@ def generate_pairs(
     pipeline: FullEQPipeline,
     seed: int = 0,
     allow_annotations: bool = False,
+    auditor_regenerations: int = 0,
 ) -> list[dict]:
+    if auditor_regenerations not in {0, 1}:
+        raise ValueError("auditor_regenerations must be 0 or 1.")
+
     rng = random.Random(seed)
     output: list[dict] = []
     seen: set[str] = set()
@@ -473,31 +477,59 @@ def generate_pairs(
                     condition=condition,
                 )
 
-            response_audit = audit_from_generation_metadata(
-                responses["eq"],
+            initial_eq = responses["eq"]
+            initial_audit = audit_from_generation_metadata(
+                initial_eq,
                 messages,
                 eq_meta,
-            ).to_dict()
-
-            output.append(
-                {
-                    "id": case_id,
-                    "source": case.get("source"),
-                    "context": messages,
-                    "baseline": responses["baseline"],
-                    "eq": responses["eq"],
-                    "generation": {
-                        "model_id": model.model_id,
-                        "temperature": model.temperature,
-                        "pair_seed": pair_seed,
-                        "order": conditions,
-                        "same_model_both_arms": True,
-                        "annotations_used": bool(annotated),
-                        "response_audit": response_audit,
-                        **eq_meta,
-                    },
-                }
             )
+            final_audit = initial_audit
+            regeneration_count = 0
+
+            if auditor_regenerations and initial_audit.should_regenerate:
+                instruction = regeneration_instruction(initial_audit)
+                if instruction:
+                    retry_messages = [
+                        eq_messages[0],
+                        {"role": "system", "content": instruction},
+                        *eq_messages[1:],
+                    ]
+                    responses["eq"] = model.generate(
+                        retry_messages,
+                        seed=pair_seed,
+                        condition="eq_audit_retry",
+                    )
+                    regeneration_count = 1
+                    final_audit = audit_from_generation_metadata(
+                        responses["eq"],
+                        messages,
+                        eq_meta,
+                    )
+
+            record = {
+                "id": case_id,
+                "source": case.get("source"),
+                "context": messages,
+                "baseline": responses["baseline"],
+                "eq": responses["eq"],
+                "generation": {
+                    "model_id": model.model_id,
+                    "temperature": model.temperature,
+                    "pair_seed": pair_seed,
+                    "order": conditions,
+                    "same_model_both_arms": True,
+                    "annotations_used": bool(annotated),
+                    "auditor_regenerations_allowed": auditor_regenerations,
+                    "audit_regeneration_count": regeneration_count,
+                    "response_audit_initial": initial_audit.to_dict(),
+                    "response_audit": final_audit.to_dict(),
+                    **eq_meta,
+                },
+            }
+            if regeneration_count:
+                record["eq_initial"] = initial_eq
+
+            output.append(record)
     finally:
         model.close()
 
@@ -513,6 +545,7 @@ def experiment_manifest(
     n_cases: int,
     allow_annotations: bool,
     git_commit: str | None = None,
+    auditor_regenerations: int = 0,
 ) -> dict:
     return {
         "design": "same-base-model paired baseline-vs-eq-layer",
@@ -525,7 +558,12 @@ def experiment_manifest(
         "global_seed": global_seed,
         "n_cases": n_cases,
         "annotations_used": allow_annotations,
-        "response_auditor_mode": "passive-metadata-only",
+        "response_auditor_mode": (
+            "one-shot-regeneration"
+            if auditor_regenerations
+            else "passive-metadata-only"
+        ),
+        "auditor_regenerations_allowed": auditor_regenerations,
         "cases_path": str(cases_path),
         "cases_sha256": file_sha256(cases_path),
         "affect_model_sha256": file_sha256(affect_model),
