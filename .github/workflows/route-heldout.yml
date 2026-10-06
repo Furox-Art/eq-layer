@@ -1,0 +1,73 @@
+# Deterministic routing evaluation on the frozen external held-out set.
+#
+# No model backend and no network access. This measures the layer's own
+# decision, so the length confound in the generative A/B path cannot arise.
+name: Deterministic Routing Heldout
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "eval/route_heldout_eval.py"
+      - "tools/build_ab_heldout.py"
+      - ".github/workflows/route-heldout.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: eq-layer-route-heldout-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  route-heldout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: python -m pip install -e ".[ml]"
+
+      - name: Build external held-out source set
+        run: |
+          mkdir -p artifacts
+          python tools/build_ab_heldout.py \
+            --output artifacts/ab_heldout_120.jsonl \
+            --manifest artifacts/ab_heldout_120.manifest.json \
+            --seed 20261005
+
+      - name: Train learned EQ-Layer components
+        run: |
+          python tools/train_emobank_affect.py \
+            --output artifacts/emobank_affect.joblib
+          python tools/train_xdailydialog_subtext.py \
+            --output artifacts/xdailydialog_subtext.joblib
+
+      - name: Enforce held-out preflight
+        run: python eval/ab_case_preflight.py artifacts/ab_heldout_120.jsonl --final
+
+      - name: Deterministic routing evaluation
+        run: |
+          python eval/route_heldout_eval.py \
+            --cases artifacts/ab_heldout_120.jsonl \
+            --affect-model artifacts/emobank_affect.joblib \
+            --subtext-model artifacts/xdailydialog_subtext.joblib \
+            --output eval/results/deterministic_routing_120.json \
+            --ballot artifacts/route_gold_ballot.jsonl
+
+      - name: Upload routing audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq-layer-deterministic-routing-120
+          path: eval/results/deterministic_routing_120.json
+          if-no-files-found: error
+
+      - name: Upload adjudication ballot
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq-layer-route-gold-ballot
+          path: artifacts/route_gold_ballot.jsonl
+          if-no-files-found: error
