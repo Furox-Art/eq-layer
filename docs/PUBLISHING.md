@@ -42,12 +42,39 @@ The same workflow has a manual dispatch input named `version`. Use it only for
 recovery/retry. The supplied version must still exactly match
 `pyproject.toml`.
 
-## npm
+## npm automatic release flow
 
-npm publishing is intentionally separate in
-`.github/workflows/publish-npm.yml` until npm authentication/trusted publishing
-is fully configured. A failed npm publication therefore cannot make a PyPI
-release workflow fail.
+The npm package uses the same semantic version as PyPI. After the first npm
+publication, GitHub Releases automatically publish npm as well.
+
+For the **first** `eq-layer@0.1.0` publication, npm requires account
+authorization because a Trusted Publisher cannot be configured until the
+package already exists in the npm registry.
+
+Create a granular npm access token with:
+
+- package/scope permission: **Read and write (publish and stage)**;
+- **Bypass 2FA** enabled for non-interactive CI publication;
+- the shortest practical expiry.
+
+Store it in the GitHub repository as the secret `NPM_TOKEN`. Then changing
+`.npm-release-request` to the package version triggers the first publication.
+
+After `eq-layer@0.1.0` exists on npm:
+
+1. open the npm package settings;
+2. add a GitHub Actions Trusted Publisher;
+3. GitHub owner/user: `Furox-Art`;
+4. repository: `eq-layer`;
+5. workflow filename: `publish-npm.yml`;
+6. environment: leave blank;
+7. permit direct `npm publish`;
+8. verify a Trusted Publisher release works;
+9. remove the long-lived `NPM_TOKEN` GitHub secret.
+
+Future GitHub Releases such as `v0.2.0` then publish to both PyPI and npm
+through their release workflows. The npm workflow verifies that the GitHub
+release version exactly matches `package.json` before uploading.
 
 ## Release validation
 
