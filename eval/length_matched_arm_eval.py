@@ -1,4 +1,4 @@
-"""Check that the length-matched arm isolates surface budget from policy.
+﻿"""Check that the length-matched arm isolates surface budget from policy.
 
 Without this arm the EQ-vs-baseline comparison is confounded: on the frozen
 120-case set the EQ arm came out 252 vs 79 characters against its own
@@ -51,11 +51,11 @@ def main() -> int:
 
     # Budget is pinned from the deterministic realization, not invented.
     built = build_length_matched_messages(
-        transcript, {"verbosity": "low", "question_budget": 1}, "generic"
+        transcript, {"verbosity": "low", "question_budget": 1}, "answer_only"
     )
     check(built[0]["role"] == "system", "length-matched arm must prepend a system message")
     check(
-        built[0]["content"] == LENGTH_CONTROL_PROFILES["generic"].format(question_budget=1),
+        built[0]["content"] == LENGTH_CONTROL_PROFILES["answer_only"].format(question_budget=1),
         "budget must come from the realization",
     )
     check("1 question" in built[0]["content"], "question budget must appear in the instruction")
@@ -92,6 +92,21 @@ def main() -> int:
         "every profile must render a distinct instruction",
     )
 
+    # Regression guard: negative constraints made replies LONGER, not shorter.
+# Measured on a 12-case Qwen2.5-0.5B pilot: mean characters were 97 for a mild
+# negative profile and 155 for the strictest, and one case reached 450 under an
+# explicit "reply in one or two sentences". A small model elaborates a stack of
+# prohibitions. Profiles must stay positive targets.
+NEGATIVE_MARKERS = ("no ", "not ", "never", "avoid", "without ", "don't", "do not", "cannot")
+
+for name, template in LENGTH_CONTROL_PROFILES.items():
+    lowered = template.lower()
+    for marker in NEGATIVE_MARKERS:
+        check(
+            marker not in lowered,
+            f"profile {name} must stay a positive target, found {marker!r}: {template!r}",
+        )
+
     # An unknown profile is an error rather than a silent fallback.
     try:
         build_length_matched_messages(transcript, {"verbosity": "low", "question_budget": 1}, "nope")
@@ -106,7 +121,7 @@ def main() -> int:
 
     # A non-low verbosity still gets a budget instruction rather than nothing.
     normal = build_length_matched_messages(
-        transcript, {"verbosity": "normal", "question_budget": 0}, "generic"
+        transcript, {"verbosity": "normal", "question_budget": 0}, "answer_only"
     )
     check(normal[0]["role"] == "system", "normal verbosity must still produce an instruction")
     check("0 question" in normal[0]["content"], "zero budget must still be stated")
@@ -156,11 +171,11 @@ def main() -> int:
         model=FakeModel(),
         global_seed=42,
         allow_annotations=False,
-        length_profiles=("generic", "terse", "minimal", "one_line"),
+        length_profiles=("answer_only", "direct", "one_sentence", "shortest_complete"),
     )
     check(len(sweep["arms"]) == 6, f"sweep should record six arms, got {sweep['arms']}")
     check(
-        all(f"length_matched:{n}" in sweep["arms"] for n in ("generic", "terse", "minimal", "one_line")),
+        all(f"length_matched:{n}" in sweep["arms"] for n in ("answer_only", "direct", "one_sentence", "shortest_complete")),
         "every profile must appear as its own arm",
     )
     check(

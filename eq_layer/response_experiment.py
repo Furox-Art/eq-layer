@@ -465,39 +465,41 @@ class FullEQPipeline:
 # is asked for in the EQ arm, but receives no affect, intent, task or repair
 # decision. Without it, EQ-vs-baseline measures length as much as steering.
 #
-# The profiles exist because a single generic brevity instruction undershoots:
-# on a 12-case Qwen pilot the first version left EQ at 0.793 of the control,
-# still a 1.28x gap. A policy-derived instruction constrains harder than a
-# generic one, so the control needs a dial.
+# Every profile is a positive target. An earlier set was phrased as negative
+# constraints ("no preamble, no caveats, no summary, no restatement") and was
+# measured on a 12-case Qwen2.5-0.5B pilot: the stronger the prohibition list,
+# the LONGER the reply. Mean characters ran 97 for a mild profile and 155 for
+# the strictest, and one case ballooned to 450 characters under an explicit
+# "reply in one or two sentences" instruction. A small model treats a stack of
+# prohibitions as material to elaborate on.
+#
+# The EQ instruction does not enumerate prohibitions, which is the likeliest
+# reason it stays short. The control has to be built the same way.
 #
 # Calibration selects among these on length alone. Tuning the control against
 # preference outcomes would fit the nuisance variable to the result it is meant
 # to be compared against.
 LENGTH_CONTROL_PROFILES: dict[str, str] = {
-    "generic": (
-        "Answer directly in as few sentences as the request needs. Use at most "
-        "{question_budget} question(s), and do not add preamble or offers of further help."
+    "answer_only": (
+        "Reply with only the answer to what was asked. "
+        "Ask at most {question_budget} question(s)."
     ),
-    "terse": (
-        "Reply in one or two sentences. Use at most {question_budget} question(s). "
-        "No preamble, no restatement of the conversation, no offer of further help, "
-        "no summary of what you are about to say."
+    "direct": (
+        "Reply with the direct answer, in one or two sentences. "
+        "Ask at most {question_budget} question(s) when the request is unclear."
     ),
-    "minimal": (
-        "Give the single most useful reply and nothing else. One or two sentences. "
-        "Use at most {question_budget} question(s). Do not restate the conversation, "
-        "do not add preamble, do not offer further help, do not summarise, and do "
-        "not explain your reasoning."
+    "one_sentence": (
+        "Reply in one sentence: the answer itself. "
+        "Ask at most {question_budget} question(s) instead when the request is unclear."
     ),
-    "one_line": (
-        "Answer in one sentence if that is enough, otherwise two. Use at most "
-        "{question_budget} question(s). No preamble, no restatement, no caveats, no "
-        "offers of further help, no summary. If the request needs nothing more than "
-        "a direct reply, give exactly that."
+    "shortest_complete": (
+        "Reply with the shortest answer that is still complete, "
+        "and give no more than the request asks for. "
+        "Ask at most {question_budget} question(s)."
     ),
 }
 
-DEFAULT_LENGTH_PROFILE = "generic"
+DEFAULT_LENGTH_PROFILE = "answer_only"
 
 
 def build_length_matched_messages(
@@ -513,12 +515,6 @@ def build_length_matched_messages(
         )
     budget = realization.get("question_budget", 0)
     instruction = LENGTH_CONTROL_PROFILES[profile].format(question_budget=budget)
-    if realization.get("verbosity") != "low" and profile == DEFAULT_LENGTH_PROFILE:
-        instruction = (
-            "Answer directly in as few sentences as the request needs. "
-            "Use at most "
-            f"{budget} question(s), and do not add preamble or offers of further help."
-        )
     return [{"role": "system", "content": instruction}, *messages]
 
 

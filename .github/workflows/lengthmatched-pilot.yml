@@ -62,10 +62,10 @@ jobs:
             --temperature 0 \
             --seed 42 \
             --limit 12 \
-            --length-profile generic \
-            --length-profile terse \
-            --length-profile minimal \
-            --length-profile one_line \
+            --length-profile answer_only \
+            --length-profile direct \
+            --length-profile one_sentence \
+            --length-profile shortest_complete \
             --persistent-model-command \
             --git-commit "$GITHUB_SHA"
 
