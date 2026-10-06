@@ -35,7 +35,38 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from eq_layer.affect import CORRECTION_MARKERS
 from eq_layer.response_experiment import FullEQPipeline  # noqa: E402
+from tools.build_ab_heldout import REPAIR_PHRASES  # noqa: E402
+
+# Strata whose membership is decided by a phrase list that the layer under test
+# also matches. Scoring these rewards recovering the selection criterion, so
+# they cannot contribute to a headline number.
+CIRCULAR_STRATA = {"task_repair"}
+
+
+def marker_overlap() -> dict:
+    """Which held-out repair phrases are also runtime correction markers.
+
+    Kept as a live audit rather than a note: if either vocabulary changes, this
+    stops describing reality, and the circularity claim should fail loudly
+    instead of quietly becoming wrong.
+    """
+    runtime = [m for m in CORRECTION_MARKERS if m.isascii()]
+    shared = {
+        phrase: [m for m in runtime if phrase in m or m in phrase]
+        for phrase in REPAIR_PHRASES
+    }
+    return {
+        "runtime_correction_markers_ascii": runtime,
+        "shared_phrases": {p: m for p, m in shared.items() if m},
+        "disjoint_phrases": [p for p, m in shared.items() if not m],
+        "verdict": (
+            "Re-selecting task_repair on disjoint phrases is infeasible: the pool is "
+            "58 candidates against a 30 quota, and one remaining phrase cannot sustain "
+            "it. Report the stratum separately instead of rebuilding it."
+        ),
+    }
 
 # The distinct decisions the adjudicator chooses between. Kept small on
 # purpose: one label per case has to be cheap enough that it actually gets
@@ -93,6 +124,11 @@ def summarise(rows: list[dict]) -> dict:
         if row.get("stratum"):
             strata.setdefault(row["stratum"], []).append(row)
 
+    non_circular = {
+        name: group for name, group in strata.items() if name not in CIRCULAR_STRATA
+    }
+    covered = sum(1 for row in rows if row.get("intent_kind") != "unknown")
+
     return {
         "n_cases": len(rows),
         "task_move": counts("task_move"),
@@ -108,6 +144,32 @@ def summarise(rows: list[dict]) -> dict:
                 "task_move": dict(sorted(Counter(r["task_move"] for r in group).items())),
             }
             for stratum, group in sorted(strata.items())
+        },
+        "intent_coverage": {
+            "n_known": covered,
+            "n_unknown": len(rows) - covered,
+            "known_ratio": round(covered / len(rows), 4) if rows else None,
+            "note": (
+                "Routing decisions on unknown-intent cases fall back to the "
+                "clarify/respond defaults, so they carry less evidence than the "
+                "case count implies."
+            ),
+        },
+        "non_circular": {
+            "strata": sorted(non_circular),
+            "circular_strata": sorted(CIRCULAR_STRATA),
+            "n_cases": sum(len(g) for g in non_circular.values()),
+            "share_of_set": (
+                round(sum(len(g) for g in non_circular.values()) / len(rows), 4)
+                if rows
+                else None
+            ),
+            "headline_rule": (
+                "Report agreement with adjudicated task moves on the non_circular "
+                "strata only. task_repair is selected by REPAIR_PHRASES and detected "
+                "by CORRECTION_MARKERS, six of seven phrases shared, so its agreement "
+                "is near-vacuous and would inflate any pooled number."
+            ),
         },
     }
 
@@ -141,6 +203,7 @@ def main() -> int:
         "length_control": "verbosity/question_budget are explicit realization controls",
         "adjudication_moves": list(ADJUDICATION_MOVES),
         "gold_questions": list(GOLD_QUESTIONS),
+        "circularity_audit": marker_overlap(),
     }
     summary["claim_boundary"] = (
         "Routing distribution is a descriptive audit of the deterministic decision. "
@@ -173,6 +236,8 @@ def main() -> int:
                                 "realization": row["realization"],
                             },
                             "adjudication": {
+                                "circular_stratum": row["stratum"] in CIRCULAR_STRATA,
+                                "excluded_from_headline": row["stratum"] in CIRCULAR_STRATA,
                                 "acceptable_task_moves": list(ADJUDICATION_MOVES),
                                 "acceptable_task_move": "",
                                 "surface_amount": "",

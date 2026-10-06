@@ -46,6 +46,21 @@ TASKMASTER_URLS = tuple(
     for path in TASKMASTER_FILES
 )
 
+REPAIR_PHRASES = (
+    "i said",
+    "i meant",
+    "meant to say",
+    "that's wrong",
+    "that is wrong",
+    "didn't say",
+    "did not say",
+)
+
+# Spelled out rather than inlined in the pattern so that the overlap with the
+# runtime repair detector can be audited from code instead of by reading two
+# regexes side by side. Six of these seven phrases are also runtime correction
+# markers, which makes the task_repair stratum circular; see
+# eval/route_heldout_eval.py.
 REPAIR_RE = re.compile(
     r"("
     r"(?<!like )(?<!as )\bi said\b|"
