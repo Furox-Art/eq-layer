@@ -64,6 +64,8 @@ jobs:
             --limit 12 \
             --length-profile answer_only \
             --length-profile direct \
+            --length-profile three_sentence \
+            --length-profile two_sentence \
             --length-profile one_sentence \
             --length-profile shortest_complete \
             --persistent-model-command \

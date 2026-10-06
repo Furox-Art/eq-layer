@@ -480,6 +480,9 @@ class FullEQPipeline:
 # preference outcomes would fit the nuisance variable to the result it is meant
 # to be compared against.
 LENGTH_CONTROL_PROFILES: dict[str, str] = {
+    # Vague targets. Measured long on a small model: 23.7 and 25.7 mean words
+    # against an EQ arm at 14.8. Kept because they show the sentence count is
+    # what does the work, not the tone of the instruction.
     "answer_only": (
         "Reply with only the answer to what was asked. "
         "Ask at most {question_budget} question(s)."
@@ -487,6 +490,17 @@ LENGTH_CONTROL_PROFILES: dict[str, str] = {
     "direct": (
         "Reply with the direct answer, in one or two sentences. "
         "Ask at most {question_budget} question(s) when the request is unclear."
+    ),
+    # Explicit sentence-count ladder. 12.2 mean words at one sentence, so the
+    # count is the dial and the intermediate rungs are what close the gap to
+    # the EQ arm rather than one aggressive profile overshooting it.
+    "three_sentence": (
+        "Reply in three sentences at most: the answer itself. "
+        "Ask at most {question_budget} question(s) instead when the request is unclear."
+    ),
+    "two_sentence": (
+        "Reply in two sentences at most: the answer itself. "
+        "Ask at most {question_budget} question(s) instead when the request is unclear."
     ),
     "one_sentence": (
         "Reply in one sentence: the answer itself. "

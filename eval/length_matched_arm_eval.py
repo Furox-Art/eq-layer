@@ -175,11 +175,11 @@ def main() -> int:
         model=FakeModel(),
         global_seed=42,
         allow_annotations=False,
-        length_profiles=("answer_only", "direct", "one_sentence", "shortest_complete"),
+        length_profiles=("answer_only", "direct", "three_sentence", "two_sentence", "one_sentence", "shortest_complete"),
     )
-    check(len(sweep["arms"]) == 6, f"sweep should record six arms, got {sweep['arms']}")
+    check(len(sweep["arms"]) == 8, f"sweep should record eight arms, got {sweep['arms']}")
     check(
-        all(f"length_matched:{n}" in sweep["arms"] for n in ("answer_only", "direct", "one_sentence", "shortest_complete")),
+        all(f"length_matched:{n}" in sweep["arms"] for n in ("answer_only", "direct", "three_sentence", "two_sentence", "one_sentence", "shortest_complete")),
         "every profile must appear as its own arm",
     )
     check(
