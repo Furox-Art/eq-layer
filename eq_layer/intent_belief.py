@@ -30,6 +30,8 @@ DECISIONS = (
 # confusions (e.g. status_check vs question) cost less than executing an action
 # when the user merely made a statement. Clarification has a moderate cost for
 # clear requests and a very low cost when the true state is unknown.
+LOSS_MATRIX_ID = "hand-specified-v1"
+
 LOSS_MATRIX: dict[str, dict[str, float]] = {
     "action_request": {
         "action_request": 0.00,
@@ -211,17 +213,27 @@ def fuse_dialogue_evidence(
     )
     return fused, tuple(evidence)
 
-def expected_loss(belief: IntentBelief, decision: str) -> float:
-    if decision not in LOSS_MATRIX:
+def expected_loss(
+    belief: IntentBelief,
+    decision: str,
+    *,
+    loss_matrix: dict[str, dict[str, float]] | None = None,
+) -> float:
+    matrix = loss_matrix or LOSS_MATRIX
+    if decision not in matrix:
         raise ValueError(f"Unsupported intent decision: {decision}")
     probabilities = belief.as_dict()
     return sum(
-        probabilities[label] * LOSS_MATRIX[decision][label]
+        probabilities[label] * matrix[decision][label]
         for label in INTENT_LABELS
     )
 
 
-def decide_intent_action(belief: IntentBelief) -> IntentRiskDecision:
+def decide_intent_action(
+    belief: IntentBelief,
+    *,
+    loss_matrix: dict[str, dict[str, float]] | None = None,
+) -> IntentRiskDecision:
     """Choose the response move with minimum expected interaction loss.
 
     This is POMDP-inspired uncertainty handling, not a full POMDP: there is no
@@ -229,8 +241,9 @@ def decide_intent_action(belief: IntentBelief) -> IntentRiskDecision:
     preserved and a transparent one-step Bayes-risk decision is made from it.
     """
 
+    matrix = loss_matrix or LOSS_MATRIX
     losses = {
-        decision: expected_loss(belief, decision)
+        decision: expected_loss(belief, decision, loss_matrix=matrix)
         for decision in DECISIONS
     }
     best_loss = min(losses.values())
@@ -257,7 +270,7 @@ def decide_intent_action(belief: IntentBelief) -> IntentRiskDecision:
             for decision in DECISIONS
         ),
         rationale=(
-            f"bayes_risk:{chosen}; top={belief.top_kind}:"
+            f"bayes_risk:{chosen}; matrix={LOSS_MATRIX_ID}; top={belief.top_kind}:"
             f"{belief.top_probability:.4f}; entropy={belief.normalized_entropy:.4f}"
         ),
     )
