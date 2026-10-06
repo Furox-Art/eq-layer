@@ -20,6 +20,8 @@ class RepairState:
     target_turn_index: int | None = None
     target_excerpt: str = ""
     correction_excerpt: str = ""
+    replacement_excerpt: str = ""
+    replacement_explicit: bool = False
     repeated: bool = False
     recent_repair_count: int = 0
     confidence: float = 0.0
@@ -47,6 +49,57 @@ def _normalise(text: str) -> str:
 def _has_correction(text: str) -> bool:
     low = text.lower()
     return any(marker in low for marker in CORRECTION_MARKERS)
+
+
+def _clean_replacement(value: str) -> str:
+    candidate = value.strip(" \t\r\n.,;:!?-–—")
+    normalized = _normalise(candidate)
+    trivial = {
+        "",
+        "that",
+        "it",
+        "this",
+        "that one",
+        "bu",
+        "şu",
+        "o",
+        "onu",
+        "bunu",
+        "şunu",
+    }
+    if normalized in trivial:
+        return ""
+    return candidate[:240]
+
+
+def _extract_replacement(text: str) -> str:
+    """Extract an explicitly supplied replacement without inferring one.
+
+    The final matching correction phrase wins, so
+    "I did not say X; I said Y" yields Y. This is structural extraction only:
+    the replacement is not treated as factually correct.
+    """
+
+    patterns = (
+        r"\bi\s+said\b\s*(?:[:,\-–—]\s*)?(.+)$",
+        r"\bi\s+meant(?:\s+to\s+say)?\b\s*(?:[:,\-–—]\s*)?(.+)$",
+        r"\bmeant\s+to\s+say\b\s*(?:[:,\-–—]\s*)?(.+)$",
+        r"\bdemek\s+istediğim\b\s*(?:[:,\-–—]\s*)?(.+)$",
+        r"\bkastettiğim\b\s*(?:[:,\-–—]\s*)?(.+)$",
+        r"(?:\bhayır\s*[,;:]?\s*)?(?:\bben\s+)?\bonu\s+demedim\b[.!?;,:\-–—\s]*(.+)$",
+        r"(?:\bhayır\s*[,;:]?\s*)?(?:\bben\s+)?\bonu\s+sormadım\b[.!?;,:\-–—\s]*(.+)$",
+    )
+
+    matches: list[tuple[int, str]] = []
+    for pattern in patterns:
+        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+            replacement = _clean_replacement(match.group(1))
+            if replacement:
+                matches.append((match.start(), replacement))
+
+    if not matches:
+        return ""
+    return max(matches, key=lambda item: item[0])[1]
 
 
 def _last_assistant_before(messages: list[dict], index: int) -> int | None:
@@ -135,6 +188,9 @@ def infer_repair_state(messages: list[dict]) -> RepairState:
     # A correction is unresolved only until the assistant has responded after
     # that correction. Historical corrections remain evidence of interaction
     # quality but are not kept artificially "active".
+    user_text = str(messages[user_index].get("content", "")).strip()
+    replacement = _extract_replacement(user_text)
+
     if any(
         message.get("role") == "assistant"
         for message in messages[user_index + 1:]
@@ -143,7 +199,9 @@ def infer_repair_state(messages: list[dict]) -> RepairState:
             active=False,
             kind="responded_repair",
             target_turn_index=assistant_index,
-            correction_excerpt=str(messages[user_index].get("content", "")).strip()[:240],
+            correction_excerpt=user_text[:240],
+            replacement_excerpt=replacement,
+            replacement_explicit=bool(replacement),
             repeated=len(recent_events) >= 2,
             recent_repair_count=len(recent_events),
             confidence=1.0,
@@ -154,7 +212,6 @@ def infer_repair_state(messages: list[dict]) -> RepairState:
     repeated = len(recent_events) >= 2
 
     assistant_text = str(messages[assistant_index].get("content", "")).strip()
-    user_text = str(messages[user_index].get("content", "")).strip()
 
     return RepairState(
         active=True,
@@ -162,6 +219,8 @@ def infer_repair_state(messages: list[dict]) -> RepairState:
         target_turn_index=assistant_index,
         target_excerpt=assistant_text[:240],
         correction_excerpt=user_text[:240],
+        replacement_excerpt=replacement,
+        replacement_explicit=bool(replacement),
         repeated=repeated,
         recent_repair_count=len(recent_events),
         confidence=1.0,
@@ -169,6 +228,7 @@ def infer_repair_state(messages: list[dict]) -> RepairState:
         evidence=(
             "explicit_user_correction_marker",
             "prior_assistant_turn",
+            *(("explicit_replacement",) if replacement else ()),
             *(
                 ("repeated_recent_repair",)
                 if repeated
