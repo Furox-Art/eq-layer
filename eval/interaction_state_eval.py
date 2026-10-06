@@ -50,6 +50,13 @@ def main() -> int:
     if quality.unresolved_repair_count != 1:
         raise AssertionError("Active repair was not counted as unresolved.")
 
+    if not repair.replacement_explicit:
+        raise AssertionError("Explicit Turkish correction replacement was not extracted.")
+    if "Sürümü soruyorum" not in repair.replacement_excerpt:
+        raise AssertionError(
+            f"Wrong Turkish replacement: {repair.replacement_excerpt!r}"
+        )
+
     # Once the assistant replies, the old correction is no longer structurally
     # unresolved. This does not claim the reply actually fixed the problem.
     responded = [
@@ -90,6 +97,45 @@ def main() -> int:
     ]
     if not infer_repair_state(english_correction).active:
         raise AssertionError("Explicit English correction was not detected.")
+
+    english_repair = infer_repair_state(english_correction)
+    if not english_repair.replacement_explicit:
+        raise AssertionError("English 'I said' replacement was not extracted.")
+    if english_repair.replacement_excerpt != "AMC Mountain 16":
+        raise AssertionError(
+            f"Wrong English replacement: {english_repair.replacement_excerpt!r}"
+        )
+
+    dolittle = infer_repair_state(
+        [
+            {"role": "assistant", "content": "Did you say Gretel and Hansel?"},
+            {"role": "user", "content": "No, I said I want to watch Dolittle."},
+        ]
+    )
+    if not dolittle.replacement_explicit or "Dolittle" not in dolittle.replacement_excerpt:
+        raise AssertionError(f"Dolittle correction was not extracted: {dolittle}")
+
+    harkins = infer_repair_state(
+        [
+            {"role": "assistant", "content": "AMC, okay."},
+            {"role": "user", "content": "I meant Harkins."},
+        ]
+    )
+    if not harkins.replacement_explicit or harkins.replacement_excerpt != "Harkins":
+        raise AssertionError(f"Harkins correction was not extracted: {harkins}")
+
+    missing_replacement = infer_repair_state(
+        [
+            {"role": "assistant", "content": "You said AMC Mercado 24."},
+            {"role": "user", "content": "I didn't say that."},
+        ]
+    )
+    if not missing_replacement.active:
+        raise AssertionError("Correction without replacement was not detected.")
+    if missing_replacement.replacement_explicit:
+        raise AssertionError(
+            f"Non-explicit correction invented a replacement: {missing_replacement}"
+        )
 
     english_nonrepair = [
         {"role": "assistant", "content": "Genre means category."},
