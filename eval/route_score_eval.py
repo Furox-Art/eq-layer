@@ -66,7 +66,7 @@ def main() -> int:
     ]
 
     rated, problems = collect(rows)
-    check(len(rated) == 8, f"expected 8 rated rows, got {len(rated)}")
+    check(len(rated) == 9, f"expected 9 rated rows, got {len(rated)}")
     check(problems == [], "no row should be reported unrated")
 
     default = report(rated, problems, include_circular=False, include_unknown_intent=False)
@@ -77,10 +77,14 @@ def main() -> int:
         default["headline"]["agreement_rate"] == 0.8,
         f"headline rate should be 0.8, got {default['headline']['agreement_rate']}",
     )
-    check(default["all_rated"]["n"] == 8, "all_rated should cover every row")
+    check(default["all_rated"]["n"] == 9, "all_rated should cover every row")
     check(
-        default["all_rated"]["agreement_rate"] == 0.75,
-        f"all_rated rate should be 0.75, got {default['all_rated']['agreement_rate']}",
+        default["all_rated"]["agreed"] == 7,
+        f"all_rated agreed should be 7, got {default['all_rated']['agreed']}",
+    )
+    check(
+        default["all_rated"]["agreement_rate"] == 0.7778,
+        f"all_rated rate should be 0.7778, got {default['all_rated']['agreement_rate']}",
     )
     check(
         default["exclusions_applied"]["circular_strata_excluded"] is True
