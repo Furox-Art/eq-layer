@@ -73,10 +73,12 @@ _ASSISTANT_OFFER_MARKERS = (
     "yapabiliriz",
     "devam edebilirim",
     "geçebilirim",
-    "sıradaki",
-    "sonraki",
-    "i can ",
-    "i could ",
+    "sıradaki adım",
+    "sonraki adım",
+    "sıradaki işlem",
+    "sonraki işlem",
+    "i can",
+    "i could",
     "would you like me to",
     "shall i",
     "next i can",
@@ -101,13 +103,13 @@ _USER_GOAL_MARKERS = (
     "nasıl",
     "anlat",
     "açıkla",
-    "do ",
-    "fix ",
-    "check ",
-    "run ",
-    "explain ",
-    "why ",
-    "how ",
+    "do",
+    "fix",
+    "check",
+    "run",
+    "explain",
+    "why",
+    "how",
 )
 
 
@@ -131,18 +133,28 @@ def _previous_index(
     return None
 
 
+def _contains_phrase(text: str, phrase: str) -> bool:
+    normalised = _normalise(text)
+    needle = _normalise(phrase)
+    if not normalised or not needle:
+        return False
+    return f" {needle} " in f" {normalised} "
+
+
 def _has_offer(text: str) -> bool:
-    low = text.lower()
-    return any(marker in low for marker in _ASSISTANT_OFFER_MARKERS)
+    return any(
+        _contains_phrase(text, marker)
+        for marker in _ASSISTANT_OFFER_MARKERS
+    )
 
 
 def _looks_like_user_goal(text: str) -> bool:
-    low = text.lower().strip()
-    if not low:
+    if not text.strip():
         return False
-    if text.rstrip().endswith("?"):
-        return True
-    return any(marker in low for marker in _USER_GOAL_MARKERS)
+    return any(
+        _contains_phrase(text, marker)
+        for marker in _USER_GOAL_MARKERS
+    )
 
 
 def _candidate_stack(
