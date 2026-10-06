@@ -36,6 +36,8 @@ jobs:
         run: python eval/interaction_state_eval.py
       - name: Run dialogue reference-state test
         run: python eval/dialogue_reference_eval.py
+      - name: Run adversarial dialogue reference benchmark
+        run: python eval/dialogue_reference_adversarial_eval.py
       - name: Run session preference test
         run: python eval/session_preferences_eval.py
       - name: Run blind A/B harness smoke test
