@@ -27,6 +27,10 @@ from eq_layer.response_experiment import (  # noqa: E402
 
 FAILURES: list[str] = []
 
+# A profile phrased as prohibitions made replies longer on a small model. See the
+# regression guard in main().
+NEGATIVE_MARKERS = ("no ", "not ", "never", "avoid", "without ", "don't", "do not", "cannot")
+
 
 def check(condition: bool, message: str) -> None:
     if not condition:
@@ -93,23 +97,23 @@ def main() -> int:
     )
 
     # Regression guard: negative constraints made replies LONGER, not shorter.
-# Measured on a 12-case Qwen2.5-0.5B pilot: mean characters were 97 for a mild
-# negative profile and 155 for the strictest, and one case reached 450 under an
-# explicit "reply in one or two sentences". A small model elaborates a stack of
-# prohibitions. Profiles must stay positive targets.
-NEGATIVE_MARKERS = ("no ", "not ", "never", "avoid", "without ", "don't", "do not", "cannot")
-
-for name, template in LENGTH_CONTROL_PROFILES.items():
-    lowered = template.lower()
-    for marker in NEGATIVE_MARKERS:
-        check(
-            marker not in lowered,
-            f"profile {name} must stay a positive target, found {marker!r}: {template!r}",
-        )
+    # Measured on a 12-case Qwen2.5-0.5B pilot: mean characters were 97 for a
+    # mild negative profile and 155 for the strictest, and one case reached 450
+    # under an explicit "reply in one or two sentences". A small model
+    # elaborates a stack of prohibitions. Profiles must stay positive targets.
+    for name, template in LENGTH_CONTROL_PROFILES.items():
+        lowered = template.lower()
+        for marker in NEGATIVE_MARKERS:
+            check(
+                marker not in lowered,
+                f"profile {name} must stay a positive target, found {marker!r}: {template!r}",
+            )
 
     # An unknown profile is an error rather than a silent fallback.
     try:
-        build_length_matched_messages(transcript, {"verbosity": "low", "question_budget": 1}, "nope")
+        build_length_matched_messages(
+            transcript, {"verbosity": "low", "question_budget": 1}, "nope"
+        )
         FAILURES.append("unknown profile should raise")
     except ValueError:
         pass
