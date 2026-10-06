@@ -228,12 +228,15 @@ def main() -> int:
                     json.dumps(
                         {
                             "id": case["id"],
+                            "stratum": row["stratum"],
                             "context": case.get("transcript") or case.get("context"),
                             "eq_layer_decision": {
                                 "task_move": row["task_move"],
                                 "social_move": row["social_move"],
                                 "repair_move": row["repair_move"],
                                 "realization": row["realization"],
+                                "intent_kind": row["intent_kind"],
+                                "intent_confidence": row["intent_confidence"],
                             },
                             "adjudication": {
                                 "circular_stratum": row["stratum"] in CIRCULAR_STRATA,

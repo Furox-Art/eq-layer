@@ -59,6 +59,7 @@ def prepare_blinded(
         ballot.append(
             {
                 "id": case_id,
+                "stratum": (row.get("source") or {}).get("stratum"),
                 "context": row.get("context", []),
                 "response_A": response_a,
                 "response_B": response_b,
@@ -132,14 +133,23 @@ def summarize(wins: int, losses: int, ties: int) -> PreferenceSummary:
     )
 
 
-def score_blinded(rated_ballot: list[dict], key: dict) -> dict:
+def score_blinded(
+    rated_ballot: list[dict],
+    key: dict,
+    *,
+    exclude_ids: set[str] | None = None,
+) -> dict:
     counts = {
         dimension: {"wins": 0, "losses": 0, "ties": 0}
         for dimension in DIMENSIONS
     }
+    excluded: list[str] = []
 
     for row in rated_ballot:
         case_id = str(row["id"])
+        if exclude_ids and case_id in exclude_ids:
+            excluded.append(case_id)
+            continue
         if case_id not in key:
             raise ValueError(f"Missing decode key for case: {case_id}")
 
@@ -166,6 +176,8 @@ def score_blinded(rated_ballot: list[dict], key: dict) -> dict:
     report = {
         "design": "blind-pairwise-human-evaluation",
         "unit": "case-level paired preference",
+        "excluded_ids": sorted(excluded),
+        "n_excluded": len(excluded),
         "dimensions": {},
     }
     for dimension, values in counts.items():
