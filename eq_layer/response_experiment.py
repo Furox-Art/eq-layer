@@ -493,8 +493,8 @@ LENGTH_CONTROL_PROFILES: dict[str, str] = {
         "Ask at most {question_budget} question(s) instead when the request is unclear."
     ),
     "shortest_complete": (
-        "Reply with the shortest answer that is still complete, "
-        "and give no more than the request asks for. "
+        "Reply with exactly what was asked for, in the fewest words that stay "
+        "complete. "
         "Ask at most {question_budget} question(s)."
     ),
 }
