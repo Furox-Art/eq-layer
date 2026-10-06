@@ -145,7 +145,7 @@ class ResponseAuditor:
             )
 
         clarification_required = (
-            context.task_move == "clarify_goal"
+            context.task_move in {"clarify_goal", "clarify_correction"}
             or context.repair_move in {"clarify_goal", "clarify_one"}
         )
         if clarification_required and question_count == 0:
