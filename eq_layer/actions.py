@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
+from .dialogue_reference import DialogueReferenceState
 from .intent import IntentState
 from .interaction import InteractionQualityState, RepairState
 from .policies import Policy, Register
@@ -42,11 +43,21 @@ def _task_move(
     intent: IntentState | None,
     policy: Policy,
     repair: RepairState | None = None,
+    reference: DialogueReferenceState | None = None,
 ) -> str:
     if repair is not None and repair.active:
         if repair.replacement_explicit:
             return "resume_prior_task_with_correction"
         return "clarify_correction"
+
+    if reference is not None and reference.active:
+        if not reference.resolved:
+            return "clarify_reference"
+        return {
+            "continue": "continue_referenced_goal",
+            "execute_reference": "execute_referenced_goal",
+            "revise_reference": "revise_referenced_output",
+        }.get(reference.form, "respond_contextually")
 
     if intent is not None:
         if intent.needs_clarification:
@@ -109,6 +120,7 @@ def _realization(
     repair_move: str,
     repair: RepairState | None = None,
     interaction_quality: InteractionQualityState | None = None,
+    reference: DialogueReferenceState | None = None,
 ) -> RealizationControls:
     by_register = {
         Register.MIRROR: ("normal", "normal", "normal"),
@@ -147,9 +159,15 @@ def _realization(
         and repair.active
         and not repair.replacement_explicit
     )
+    reference_needs_clarification = (
+        reference is not None
+        and reference.active
+        and not reference.resolved
+    )
     question_budget = 1 if (
         explicit_replacement
         or repair_needs_clarification
+        or reference_needs_clarification
         or repair_move in {"clarify_goal", "clarify_one"}
         or (
             intent is not None
@@ -161,6 +179,7 @@ def _realization(
     no_guess = (
         "no_guess" in constraints
         or repair_needs_clarification
+        or reference_needs_clarification
         or (
             intent is not None
             and intent.needs_clarification
@@ -189,10 +208,11 @@ def compose_action(
     *,
     repair: RepairState | None = None,
     interaction_quality: InteractionQualityState | None = None,
+    reference: DialogueReferenceState | None = None,
 ) -> FactoredAction:
     """Compile policy + intent + dialogue-health state into orthogonal controls."""
 
-    task_move = _task_move(intent, policy, repair)
+    task_move = _task_move(intent, policy, repair, reference)
     if policy.name == "boundary":
         task_move = "set_boundary"
 
@@ -216,6 +236,7 @@ def compose_action(
             repair_move=repair_move,
             repair=repair,
             interaction_quality=interaction_quality,
+            reference=reference,
         ),
         source_policy=policy.name,
     )
