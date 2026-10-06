@@ -1,3 +1,5 @@
+__version__ = "0.1.0"
+
 from .affect import AffectAdapter, HeuristicAffect, load_cases
 from .auditor import AuditContext, AuditIssue, ResponseAudit, ResponseAuditor, audit_from_generation_metadata
 from .actions import FactoredAction, RealizationControls, compose_action
@@ -14,6 +16,7 @@ from .trained_subtext import DialogueSignals, SubtextDecision, TrainedSubtext
 from .tracker import AnnotationStanceResolver, ConversationTracker, StanceDecision, TrackingResult
 
 __all__ = [
+    "__version__",
     "AffectAdapter",
     "AffectState",
     "audit_from_generation_metadata",

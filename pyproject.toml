@@ -1,15 +1,52 @@
 [project]
 name = "eq-layer"
 version = "0.1.0"
-description = "A control layer that decides how an LLM should speak before it speaks"
+description = "Inspectable intent, affect, repair, uncertainty, and factored-action control for LLM responses"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
+authors = [
+  { name = "Furox-Art" },
+]
+keywords = [
+  "llm",
+  "agents",
+  "agent-skills",
+  "dialogue-management",
+  "affective-computing",
+  "intent-classification",
+  "llm-steering",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = []
 
 [project.optional-dependencies]
 ml = ["scikit-learn>=1.5,<2"]
-dev = ["ruff", "pytest", "scikit-learn>=1.5,<2"]
+dev = [
+  "build>=1.2,<2",
+  "pytest",
+  "ruff",
+  "scikit-learn>=1.5,<2",
+  "twine>=6,<7",
+]
+
+[project.scripts]
+eq-layer = "eq_layer.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Furox-Art/eq-layer"
+Repository = "https://github.com/Furox-Art/eq-layer"
+Issues = "https://github.com/Furox-Art/eq-layer/issues"
 
 [build-system]
 requires = ["hatchling"]
@@ -17,6 +54,14 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["eq_layer"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/eq_layer",
+  "/README.md",
+  "/LICENSE",
+  "/THIRD_PARTY_DATA.md",
+]
 
 [tool.ruff]
 line-length = 100
