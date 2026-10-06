@@ -1,0 +1,213 @@
+{
+  "audit": "intent-risk-grouped-cost-sensitivity-heldout-120",
+  "status": "no-go-for-loss-matrix-calibration-claim",
+  "source": {
+    "workflow_run_id": 37458737836,
+    "workflow_head_sha": "9f8d1bb48f419c8fe6bc21522a0499a2cffad8d6",
+    "artifact_id": 11411063120,
+    "artifact_name": "eq-layer-qwen-openweight-pilot-provenance",
+    "artifact_digest": "sha256:cc786e91de8d46b3672357fdf42be48ad81b99ea92a42b9b7102148d751f155a",
+    "input_file": "heldout_control_intent_risk_sensitivity.json",
+    "n_cases": 120,
+    "loss_matrix_id": "hand-specified-v1"
+  },
+  "production_routing": {
+    "action_counts": {
+      "clarify": 54,
+      "statement": 53,
+      "question": 5,
+      "action_request": 5,
+      "explanation": 1,
+      "status_check": 2
+    },
+    "clarification_rate": 0.45
+  },
+  "perturbation_protocol": {
+    "factors": [
+      0.8,
+      1.2
+    ],
+    "rule": "Scale all listed cells in one pre-specified semantic cost group simultaneously; keep every other loss cell fixed.",
+    "tuning_prohibited": true
+  },
+  "scenarios": {
+    "clarification_cost": {
+      "cells": [
+        "clarify:action_request",
+        "clarify:status_check",
+        "clarify:explanation",
+        "clarify:question",
+        "clarify:statement",
+        "clarify:unknown"
+      ],
+      "0.8": {
+        "action_counts": {
+          "clarify": 76,
+          "statement": 34,
+          "question": 2,
+          "action_request": 5,
+          "explanation": 1,
+          "status_check": 2
+        },
+        "flips_vs_production": 22,
+        "flip_rate": 0.1833,
+        "flip_case_ids": [
+          "external-002",
+          "external-007",
+          "external-008",
+          "external-011",
+          "external-018",
+          "external-020",
+          "external-023",
+          "external-033",
+          "external-035",
+          "external-039",
+          "external-044",
+          "external-046",
+          "external-049",
+          "external-059",
+          "external-074",
+          "external-094",
+          "external-099",
+          "external-105",
+          "external-108",
+          "external-110",
+          "external-119",
+          "external-120"
+        ]
+      },
+      "1.2": {
+        "action_counts": {
+          "statement": 67,
+          "clarify": 27,
+          "question": 15,
+          "action_request": 7,
+          "explanation": 2,
+          "status_check": 2
+        },
+        "flips_vs_production": 27,
+        "flip_rate": 0.225,
+        "flip_case_ids": [
+          "external-001",
+          "external-012",
+          "external-015",
+          "external-036",
+          "external-048",
+          "external-050",
+          "external-062",
+          "external-063",
+          "external-064",
+          "external-065",
+          "external-066",
+          "external-067",
+          "external-068",
+          "external-071",
+          "external-072",
+          "external-073",
+          "external-078",
+          "external-081",
+          "external-084",
+          "external-085",
+          "external-089",
+          "external-090",
+          "external-096",
+          "external-103",
+          "external-111",
+          "external-113",
+          "external-117"
+        ]
+      }
+    },
+    "action_vs_statement_mismatch": {
+      "cells": [
+        "action_request:statement",
+        "statement:action_request"
+      ],
+      "0.8": {
+        "action_counts": {
+          "clarify": 46,
+          "statement": 59,
+          "question": 5,
+          "action_request": 7,
+          "explanation": 1,
+          "status_check": 2
+        },
+        "flips_vs_production": 8,
+        "flip_rate": 0.0667,
+        "flip_case_ids": [
+          "external-015",
+          "external-048",
+          "external-050",
+          "external-063",
+          "external-064",
+          "external-078",
+          "external-084",
+          "external-089"
+        ]
+      },
+      "1.2": {
+        "action_counts": {
+          "clarify": 61,
+          "statement": 46,
+          "question": 5,
+          "action_request": 5,
+          "explanation": 1,
+          "status_check": 2
+        },
+        "flips_vs_production": 7,
+        "flip_rate": 0.0583,
+        "flip_case_ids": [
+          "external-007",
+          "external-011",
+          "external-020",
+          "external-044",
+          "external-049",
+          "external-074",
+          "external-099"
+        ]
+      }
+    },
+    "status_vs_question_mismatch": {
+      "cells": [
+        "status_check:question",
+        "question:status_check"
+      ],
+      "0.8": {
+        "action_counts": {
+          "clarify": 54,
+          "statement": 53,
+          "question": 5,
+          "action_request": 5,
+          "explanation": 1,
+          "status_check": 2
+        },
+        "flips_vs_production": 0,
+        "flip_rate": 0,
+        "flip_case_ids": []
+      },
+      "1.2": {
+        "action_counts": {
+          "clarify": 54,
+          "statement": 54,
+          "question": 4,
+          "action_request": 5,
+          "explanation": 1,
+          "status_check": 2
+        },
+        "flips_vs_production": 1,
+        "flip_rate": 0.0083,
+        "flip_case_ids": [
+          "external-110"
+        ]
+      }
+    }
+  },
+  "interpretation": {
+    "clarification_cost": "Materially sensitive: grouped ±20% clarification-cost scaling changes 18.33% to 22.50% of routes.",
+    "action_vs_statement_mismatch": "Moderately sensitive: grouped ±20% mismatch scaling changes 5.83% to 6.67% of routes.",
+    "status_vs_question_mismatch": "Locally stable: grouped ±20% mismatch scaling changes 0% to 0.83% of routes.",
+    "relation_to_cellwise_audit": "This does not contradict the 98.55% one-cell-at-a-time stability result. Grouped perturbations coherently move multiple related cells at once and therefore test a stronger failure mode.",
+    "decision": "NO-GO for any claim that the current hand-specified loss matrix is calibrated, optimal, or robust as a whole. Preserve the matrix and treat these results as limitations until an independent calibration protocol with separate data is defined.",
+    "prohibition": "Do not tune these costs against this held-out set or blinded response-preference outcomes."
+  }
+}
