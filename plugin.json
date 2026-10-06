@@ -1,0 +1,19 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "eq-layer",
+  "version": "0.1.0",
+  "description": "Inspectable intent, affect, repair, uncertainty, and factored-action control skill for general-purpose AI agents.",
+  "author": {
+    "name": "Furox-Art",
+    "url": "https://github.com/Furox-Art"
+  },
+  "repository": "https://github.com/Furox-Art/eq-layer",
+  "license": "MIT",
+  "keywords": [
+    "agent-skills",
+    "dialogue-management",
+    "affective-computing",
+    "llm-steering",
+    "eq"
+  ]
+}

@@ -56,6 +56,8 @@ jobs:
         run: python eval/intent_risk_sensitivity_eval.py
       - name: Run loss-matrix calibration safeguard test
         run: python eval/loss_matrix_calibration_eval.py
+      - name: Run agent skill packaging test
+        run: python eval/skill_packaging_eval.py
       - name: Run heldout control-state audit test
         run: python eval/heldout_control_audit_eval.py
       - name: Run intent dialogue-evidence fusion test

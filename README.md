@@ -43,6 +43,38 @@ Early. The harness runs; the numbers are development signals, not a real-world E
 
 There is no standard benchmark for EQ. `eval/` is a first attempt at one, not a finished measurement. If you improve the scorer, that contribution matters as much as adding a policy.
 
+## Agent Skills: Codex, Claude, Copilot, Cursor, Antigravity, and Grok
+
+EQ-Layer is packaged as a portable Agent Skill in `skills/eq-layer/` and as an
+Agent Plugins 1.0 package via `plugin.json`. Repository discovery shims are
+included for the major agent ecosystems:
+
+| Agent | Repository path |
+| --- | --- |
+| OpenAI Codex | `.codex/skills/eq-layer/` |
+| Anthropic Claude Code | `.claude/skills/eq-layer/` |
+| GitHub Copilot | `.github/skills/eq-layer/` |
+| Cursor | `.cursor/skills/eq-layer/` |
+| Google Antigravity | `.agents/skills/eq-layer/` |
+| xAI Grok Build | `.grok/skills/eq-layer/` |
+
+For a user-level install across all supported discovery roots:
+
+```bash
+python tools/install_agent_skills.py --target all
+```
+
+The skill includes a local routing script and reports whether it used the
+lightweight portable path or the full learned research pipeline.
+
+```bash
+printf '%s' '[{"role":"user","content":"devam et"}]' \
+  | python skills/eq-layer/scripts/route.py --pretty
+```
+
+See `skills/eq-layer/references/VENDOR_COMPATIBILITY.md` for verified discovery
+paths and source documentation.
+
 ## Quick start
 
 Install the learned intent tracker:

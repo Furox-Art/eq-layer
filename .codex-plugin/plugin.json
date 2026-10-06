@@ -1,0 +1,6 @@
+{
+  "name": "eq-layer",
+  "version": "0.1.0",
+  "description": "Inspectable EQ-Layer response-control skill.",
+  "skills": "./skills/"
+}
