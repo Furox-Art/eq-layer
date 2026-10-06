@@ -7,6 +7,8 @@ on:
     paths:
       - "eval/hf_model_server.py"
       - "eq_layer/response_experiment.py"
+      - "eq_layer/preferences.py"
+      - "eq_layer/auditor.py"
       - "eq_layer/trained_intent.py"
       - "eq_layer/intent_belief.py"
       - "eq_layer/intent.py"
@@ -71,6 +73,7 @@ jobs:
             --subtext-model artifacts/xdailydialog_subtext.joblib \
             --temperature 0 \
             --seed 42 \
+            --auditor-regenerations 1 \
             --stratified-limit 12 \
             --persistent-model-command \
             --git-commit "$GITHUB_SHA"
