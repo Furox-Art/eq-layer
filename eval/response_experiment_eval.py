@@ -18,6 +18,72 @@ from eq_layer.response_experiment import (  # noqa: E402
 )
 
 
+class AuditFixModel:
+    model_id = "audit-fix-model"
+    temperature = 0.0
+
+    def __init__(self):
+        self.calls = []
+
+    def generate(self, messages, *, seed, condition):
+        self.calls.append((condition, seed, list(messages)))
+        has_retry = any(
+            message.get("role") == "system"
+            and "previous draft violated eq-layer structural control contracts"
+            in str(message.get("content", "")).lower()
+            for message in messages
+        )
+        if has_retry:
+            return "Which version number do you mean?"
+        if condition == "baseline":
+            return "Baseline response."
+        return "I need more information before I can answer."
+
+    def close(self):
+        return None
+
+
+class ClarifyPipeline:
+    def steer_messages(self, messages, *, annotated=None):
+        return (
+            [
+                {
+                    "role": "system",
+                    "content": "Ask one targeted clarification question.",
+                },
+                *messages,
+            ],
+            {
+                "policy": "clarify_request",
+                "register": "ask",
+                "intent_kind": "unknown",
+                "intent_confidence": 0.4,
+                "factored_action": {
+                    "task_move": "clarify_goal",
+                    "social_move": "neutral",
+                    "repair_move": "clarify_one",
+                    "realization": {
+                        "verbosity": "low",
+                        "directness": "high",
+                        "warmth": "normal",
+                        "question_budget": 1,
+                        "scope_limited": False,
+                        "no_guess": True,
+                    },
+                },
+                "subtext": "plain",
+                "subtext_evidence_level": "fallback",
+                "stance": "unknown",
+                "stance_evidence_level": "unknown",
+                "repair": {
+                    "active": False,
+                    "kind": "none",
+                },
+                "selection_rationale": "audit-regeneration-smoke",
+            },
+        )
+
+
 class FakePipeline:
     def steer_messages(self, messages, *, annotated=None):
         return (
@@ -100,12 +166,48 @@ def main() -> int:
             raise AssertionError("Passive response audit metadata is missing.")
         if "passed" not in audit or "issues" not in audit:
             raise AssertionError(f"Malformed response audit metadata: {audit}")
+        if generation["auditor_regenerations_allowed"] != 0:
+            raise AssertionError("Passive mode unexpectedly allowed regeneration.")
+        if generation["audit_regeneration_count"] != 0:
+            raise AssertionError("Passive mode unexpectedly regenerated a response.")
+        if "eq_initial" in pair:
+            raise AssertionError("Passive mode should not emit an alternate EQ draft.")
 
     if (
         pairs[0]["generation"]["pair_seed"]
         != stable_case_seed(17, "heldout-001")
     ):
         raise AssertionError("Per-case seed is not deterministic.")
+
+    retry_model = AuditFixModel()
+    retry_pairs = generate_pairs(
+        [
+            {
+                "id": "retry-001",
+                "transcript": [
+                    {"role": "user", "content": "Which one?"}
+                ],
+            }
+        ],
+        model=retry_model,
+        pipeline=ClarifyPipeline(),
+        seed=23,
+        auditor_regenerations=1,
+    )
+    retry_pair = retry_pairs[0]
+    retry_generation = retry_pair["generation"]
+    if retry_generation["audit_regeneration_count"] != 1:
+        raise AssertionError(f"Expected one audit regeneration: {retry_generation}")
+    if retry_generation["response_audit_initial"]["passed"]:
+        raise AssertionError("Initial failing draft unexpectedly passed audit.")
+    if not retry_generation["response_audit"]["passed"]:
+        raise AssertionError(f"Regenerated response still failed audit: {retry_pair}")
+    if "eq_initial" not in retry_pair:
+        raise AssertionError("Regeneration provenance did not retain the initial EQ draft.")
+    if retry_pair["eq_initial"] == retry_pair["eq"]:
+        raise AssertionError("Regeneration did not replace the failing EQ draft.")
+    if "?" not in retry_pair["eq"]:
+        raise AssertionError("Regeneration did not produce the required clarification question.")
 
     pilot_preflight = validate_experiment_cases(cases, final=False)
     if not pilot_preflight["ok"]:
@@ -168,6 +270,20 @@ def main() -> int:
             raise AssertionError("Manifest says annotations were used.")
         if manifest.get("response_auditor_mode") != "passive-metadata-only":
             raise AssertionError("Manifest did not preserve passive auditor mode.")
+
+        retry_manifest = experiment_manifest(
+            model=model,
+            affect_model=affect_path,
+            subtext_model=subtext_path,
+            cases_path=cases_path,
+            global_seed=17,
+            n_cases=1,
+            allow_annotations=False,
+            git_commit="deadbeef",
+            auditor_regenerations=1,
+        )
+        if retry_manifest.get("response_auditor_mode") != "one-shot-regeneration":
+            raise AssertionError("One-shot auditor mode was not recorded in the manifest.")
 
     print("response experiment engine: pass")
     return 0
