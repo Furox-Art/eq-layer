@@ -80,6 +80,7 @@ def route_case(pipeline: FullEQPipeline, case: dict) -> dict:
         "repair_move": action.get("repair_move"),
         "verbosity": realization.get("verbosity"),
         "question_budget": realization.get("question_budget"),
+        "realization": realization,
     }
 
 
