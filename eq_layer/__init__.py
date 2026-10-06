@@ -5,6 +5,7 @@ from .intent import HeuristicIntent, IntentAdapter, IntentState
 from .intent_belief import IntentBelief, IntentRiskDecision, decide_intent_action, expected_loss
 from .interaction import InteractionQualityState, RepairState, infer_interaction_quality, infer_repair_state
 from .policies import POLICIES, REGISTRY, SUBTEXTS, AffectState, Policy, Register, Selector
+from .preferences import SessionPreferences, infer_session_preferences
 from .response_experiment import CommandModel, FullEQPipeline, generate_pairs, validate_experiment_cases
 from .steer import Steer, aggregate, score_case
 from .trained_affect import DimensionalAffect, TrainedAffect
@@ -41,6 +42,8 @@ __all__ = [
     "Register",
     "SUBTEXTS",
     "Selector",
+    "infer_session_preferences",
+    "SessionPreferences",
     "Steer",
     "TrainedIntent",
     "TrainedAffect",
