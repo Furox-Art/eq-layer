@@ -351,6 +351,7 @@ class FullEQPipeline:
             intent,
             repair=tracked.repair,
             interaction_quality=tracked.interaction_quality,
+            reference=tracked.reference,
         )
         instruction = steer.system_instruction()
 
@@ -429,6 +430,30 @@ class FullEQPipeline:
                 "clarification_count": tracked.interaction_quality.clarification_count,
                 "evidence_level": tracked.interaction_quality.evidence_level,
                 "evidence": list(tracked.interaction_quality.evidence),
+            },
+            "dialogue_reference": {
+                "active": tracked.reference.active,
+                "form": tracked.reference.form,
+                "resolved": tracked.reference.resolved,
+                "target_turn_index": tracked.reference.target_turn_index,
+                "target_role": tracked.reference.target_role,
+                "target_excerpt": tracked.reference.target_excerpt,
+                "anchor_turn_index": tracked.reference.anchor_turn_index,
+                "anchor_excerpt": tracked.reference.anchor_excerpt,
+                "requires_clarification": tracked.reference.requires_clarification,
+                "confidence": tracked.reference.confidence,
+                "evidence_level": tracked.reference.evidence_level,
+                "evidence": list(tracked.reference.evidence),
+                "candidate_stack": [
+                    {
+                        "turn_index": candidate.turn_index,
+                        "role": candidate.role,
+                        "kind": candidate.kind,
+                        "excerpt": candidate.excerpt,
+                        "evidence": list(candidate.evidence),
+                    }
+                    for candidate in tracked.reference.candidate_stack
+                ],
             },
             "selection_rationale": selection.rationale,
         }
