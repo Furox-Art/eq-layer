@@ -1,0 +1,108 @@
+{
+  "audit": "intent-risk-heldout-120",
+  "status": "development-only-mixed-caution",
+  "source": {
+    "workflow_run_id": 37458737836,
+    "workflow_head_sha": "9f8d1bb48f419c8fe6bc21522a0499a2cffad8d6",
+    "provenance_artifact": "eq-layer-qwen-openweight-pilot-provenance",
+    "provenance_artifact_digest": "sha256:cc786e91de8d46b3672357fdf42be48ad81b99ea92a42b9b7102148d751f155a",
+    "n_cases": 120,
+    "strata": {
+      "empathetic": 60,
+      "task_general": 30,
+      "task_repair": 30
+    }
+  },
+  "production_routing": {
+    "action_counts": {
+      "clarify": 54,
+      "statement": 53,
+      "question": 5,
+      "action_request": 5,
+      "explanation": 1,
+      "status_check": 2
+    },
+    "clarification_rate": 0.45,
+    "raw_to_fused_action_flips": 53,
+    "by_stratum": {
+      "empathetic": {
+        "n": 60,
+        "clarification_rate": 0.25,
+        "mean_fused_entropy": 0.706
+      },
+      "task_general": {
+        "n": 30,
+        "clarification_rate": 0.4333,
+        "mean_fused_entropy": 0.7766
+      },
+      "task_repair": {
+        "n": 30,
+        "clarification_rate": 0.8667,
+        "mean_fused_entropy": 0.8954
+      }
+    }
+  },
+  "local_cellwise_robustness": {
+    "factors": [
+      0.8,
+      1.2
+    ],
+    "nonzero_loss_cells": 31,
+    "perturbations_per_case": 62,
+    "decisions_tested": 7440,
+    "total_action_flips": 108,
+    "decision_stability_rate": 0.9855,
+    "fully_stable_cases": 93,
+    "by_stratum": {
+      "empathetic": {
+        "decision_stability_rate": 0.9852,
+        "brittle_cases": 15
+      },
+      "task_general": {
+        "decision_stability_rate": 0.9898,
+        "brittle_cases": 6
+      },
+      "task_repair": {
+        "decision_stability_rate": 0.9817,
+        "brittle_cases": 6
+      }
+    }
+  },
+  "clarification_cost_sensitivity": {
+    "0.75": {
+      "clarification_rate": 0.6917,
+      "flips_vs_production": 29
+    },
+    "1.0": {
+      "clarification_rate": 0.45,
+      "flips_vs_production": 0
+    },
+    "1.25": {
+      "clarification_rate": 0.1917,
+      "flips_vs_production": 31
+    },
+    "1.5": {
+      "clarification_rate": 0.0917,
+      "flips_vs_production": 43
+    },
+    "1.75": {
+      "clarification_rate": 0.0417,
+      "flips_vs_production": 49
+    },
+    "2.0": {
+      "clarification_rate": 0.025,
+      "flips_vs_production": 51
+    },
+    "2.5": {
+      "clarification_rate": 0.0083,
+      "flips_vs_production": 53
+    }
+  },
+  "interpretation": {
+    "local_result": "Routing is locally stable to one-at-a-time ±20% perturbations of individual non-zero loss cells in this held-out control audit.",
+    "global_result": "Routing is strongly sensitive to the overall clarification-cost scale; the current clarification row is therefore not empirically calibrated.",
+    "repair_result": "Task-repair cases show high posterior entropy and an 86.67% clarification rate. This may reflect genuine ambiguity, but it requires targeted human adjudication rather than automatic tuning.",
+    "decision": "NO CLAIM that the current hand-specified loss matrix is optimal or externally validated. Preserve the current matrix until a separate calibration protocol is defined.",
+    "prohibition": "Do not tune loss costs against blinded response-preference outcomes or this same held-out audit set."
+  }
+}
