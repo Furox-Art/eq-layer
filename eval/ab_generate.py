@@ -50,6 +50,13 @@ def main() -> int:
     parser.add_argument("--affect-model", required=True)
     parser.add_argument("--subtext-model", required=True)
     parser.add_argument("--temperature", type=float, default=0.0)
+    parser.add_argument(
+        "--auditor-regenerations",
+        type=int,
+        choices=(0, 1),
+        default=0,
+        help="Engineering mode: allow at most one EQ retry after a hard structural audit failure.",
+    )
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--timeout-seconds", type=int, default=120)
     parser.add_argument(
@@ -87,6 +94,10 @@ def main() -> int:
         parser.error("--final cannot use --allow-development-cases")
     if args.final and args.allow_oracle_annotations:
         parser.error("--final cannot use --allow-oracle-annotations")
+    if args.final and args.auditor_regenerations:
+        parser.error(
+            "--final cannot use auditor regeneration until that protocol is separately preregistered"
+        )
 
     cases_path = Path(args.cases).resolve()
     if cases_path == DEVELOPMENT_CASES and not args.allow_development_cases:
@@ -130,6 +141,7 @@ def main() -> int:
         pipeline=pipeline,
         seed=args.seed,
         allow_annotations=args.allow_oracle_annotations,
+        auditor_regenerations=args.auditor_regenerations,
     )
     write_jsonl(args.pairs, pairs)
 
@@ -142,6 +154,7 @@ def main() -> int:
         n_cases=len(cases),
         allow_annotations=args.allow_oracle_annotations,
         git_commit=args.git_commit,
+        auditor_regenerations=args.auditor_regenerations,
     )
     manifest["development_cases_allowed"] = args.allow_development_cases
     manifest["final_mode"] = args.final
@@ -150,6 +163,7 @@ def main() -> int:
     manifest["stratified_limit"] = args.stratified_limit
     manifest["selected_strata"] = stratum_counts(cases)
     manifest["persistent_model_command"] = args.persistent_model_command
+    manifest["auditor_regenerations"] = args.auditor_regenerations
 
     with open(args.manifest, "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, ensure_ascii=False, indent=2)
