@@ -27,6 +27,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from eq_layer.ab_eval import load_jsonl, write_jsonl  # noqa: E402
 from eq_layer.response_experiment import (  # noqa: E402
+    EQ_MATCHED_PROFILE,
     LENGTH_CONTROL_PROFILES,
     CommandModel,
     FullEQPipeline,
@@ -72,12 +73,14 @@ def main() -> int:
         "--length-profile",
         action="append",
         dest="length_profiles",
-        choices=sorted(LENGTH_CONTROL_PROFILES),
+        choices=sorted(LENGTH_CONTROL_PROFILES) + [EQ_MATCHED_PROFILE],
         default=None,
         help=(
             "Generate one length-matched control arm per profile so a single pass "
             "covers the calibration sweep. Repeatable. Selection is made on arm "
-            "length only, never on preference outcomes."
+            "length only, never on preference outcomes. eq_matched derives its "
+            "sentence budget from the EQ response, which couples the arms toward "
+            "ties."
         ),
     )
     parser.add_argument("--seed", type=int, default=0)

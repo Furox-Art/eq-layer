@@ -20,8 +20,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from eq_layer.response_experiment import (  # noqa: E402
     DEFAULT_LENGTH_PROFILE,
+    EQ_MATCHED_PROFILE,
     LENGTH_CONTROL_PROFILES,
+    build_eq_matched_messages,
     build_length_matched_messages,
+    count_sentences,
     experiment_manifest,
 )
 
@@ -123,6 +126,37 @@ def main() -> int:
         "the default profile must exist",
     )
 
+    # eq_matched reads its budget off the EQ response.
+    check(count_sentences("One. Two. Three.") == 3, "sentence counting must be exact")
+    check(count_sentences("Only one.") == 1, "a single sentence must count as one")
+    check(count_sentences("No terminator here") == 1, "unterminated text still counts once")
+
+    realization = {"verbosity": "low", "question_budget": 1}
+    derived = build_eq_matched_messages(transcript, realization, "One. Two. Three.")
+    check(derived[0]["role"] == "system", "eq_matched must prepend a system message")
+    check("3 sentences" in derived[0]["content"], "target must come from the EQ response")
+    check(derived[1:] == transcript, "eq_matched must preserve the transcript")
+
+    single = build_eq_matched_messages(transcript, realization, "Just one.")
+    check("1 sentence" in single[0]["content"], "singular must not read '1 sentences'")
+
+    # A rambling EQ response must not produce an unbounded budget.
+    clamped = build_eq_matched_messages(transcript, realization, ". ".join(["S"] * 20))
+    check("4 sentences" in clamped[0]["content"], "the target must be clamped at 4")
+
+    empty = build_eq_matched_messages(transcript, realization, "   ")
+    check("1 sentence" in empty[0]["content"], "an empty EQ response still needs a floor of one")
+
+    # No decision content may leak into the derived instruction.
+    derived_text = derived[0]["content"].lower()
+    for leak in ("empath", "affect", "policy", "mirror", "stance", "subtext", "repair"):
+        check(leak not in derived_text, f"eq_matched must not mention {leak}")
+
+    check(
+        EQ_MATCHED_PROFILE not in LENGTH_CONTROL_PROFILES,
+        "eq_matched is derived, not a static template, so it must not be listed as one",
+    )
+
     # A non-low verbosity still gets a budget instruction rather than nothing.
     normal = build_length_matched_messages(
         transcript, {"verbosity": "normal", "question_budget": 0}, "answer_only"
@@ -175,11 +209,11 @@ def main() -> int:
         model=FakeModel(),
         global_seed=42,
         allow_annotations=False,
-        length_profiles=("answer_only", "direct", "three_sentence", "two_sentence", "one_sentence", "shortest_complete"),
+        length_profiles=("one_sentence", "two_sentence", "eq_matched"),
     )
-    check(len(sweep["arms"]) == 8, f"sweep should record eight arms, got {sweep['arms']}")
+    check(len(sweep["arms"]) == 5, f"sweep should record five arms, got {sweep['arms']}")
     check(
-        all(f"length_matched:{n}" in sweep["arms"] for n in ("answer_only", "direct", "three_sentence", "two_sentence", "one_sentence", "shortest_complete")),
+        all(f"length_matched:{n}" in sweep["arms"] for n in ("one_sentence", "two_sentence", "eq_matched")),
         "every profile must appear as its own arm",
     )
     check(
@@ -187,6 +221,15 @@ def main() -> int:
         "manifest must state that profile selection uses length only",
     )
     check("sweep" in sweep["design"], "sweep design should be named")
+    check(
+        sweep["eq_matched_arm_coupling"] is not None
+        and "ties" in sweep["eq_matched_arm_coupling"],
+        "the manifest must record that eq_matched couples the arms toward ties",
+    )
+    check(
+        paired["eq_matched_arm_coupling"] is None,
+        "a sweep without eq_matched must not claim coupling",
+    )
 
     # An unknown profile must be rejected at manifest time too.
     try:

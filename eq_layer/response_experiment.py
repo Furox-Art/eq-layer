@@ -532,6 +532,45 @@ def build_length_matched_messages(
     return [{"role": "system", "content": instruction}, *messages]
 
 
+EQ_MATCHED_PROFILE = "eq_matched"
+
+
+def count_sentences(text: str) -> int:
+    parts = [part for part in re.split(r"[.!?]+", text) if part.strip()]
+    return len(parts)
+
+
+def build_eq_matched_messages(
+    messages: list[dict],
+    realization: dict,
+    eq_response: str,
+) -> list[dict]:
+    """Control arm whose sentence budget is read off the EQ arm's own output.
+
+    The fixed ladder bottoms out around 11 percent off on 120 cases because
+    "reply in one sentence" does not reliably land on one sentence, and the
+    ladder has no rung between one and two. Reading the target off the EQ
+    response closes that per case instead of on average.
+
+    This couples the two arms: the control is no longer independent of EQ. The
+    bias runs in the conservative direction. The control is told a sentence
+    count, never a decision, so it cannot inherit what EQ decided; but a
+    response shaped like EQ will more often come out similar in form, which
+    pushes disagreement toward ties. That would hide an EQ win rather than
+    manufacture one, which is the safer direction for a control to err in.
+
+    Selection still reads length only. Preference outcomes are not consulted.
+    """
+    target = min(max(count_sentences(eq_response), 1), 4)
+    budget = realization.get("question_budget", 0)
+    unit = "sentence" if target == 1 else "sentences"
+    instruction = (
+        f"Reply in {target} {unit} at most: the answer itself. "
+        f"Ask at most {budget} question(s) instead when the request is unclear."
+    )
+    return [{"role": "system", "content": instruction}, *messages]
+
+
 def generate_pairs(
     cases: Iterable[dict],
     *,
@@ -547,7 +586,7 @@ def generate_pairs(
         raise ValueError("auditor_regenerations must be 0 or 1.")
     profiles = tuple(length_profiles or ())
     for name in profiles:
-        if name not in LENGTH_CONTROL_PROFILES:
+        if name not in LENGTH_CONTROL_PROFILES and name != EQ_MATCHED_PROFILE:
             raise ValueError(
                 f"Unknown length profile {name!r}; expected one of "
                 f"{sorted(LENGTH_CONTROL_PROFILES)}"
@@ -579,25 +618,34 @@ def generate_pairs(
             # One arm per profile so a single generation pass covers the whole
             # calibration sweep. Each arm is an independent condition with the
             # same model, temperature and per-case seed.
-            conditions = ["baseline", "eq"] + [
-                f"length_matched:{name}" for name in profiles
-            ]
+            controls = [f"length_matched:{name}" for name in profiles]
             if length_matched_arm and not profiles:
-                conditions.append("length_matched")
-            rng.shuffle(conditions)
-            responses: dict[str, str] = {}
+                controls.append("length_matched")
 
-            for condition in conditions:
-                if condition == "baseline":
-                    condition_messages = messages
-                elif condition == "eq":
-                    condition_messages = eq_messages
-                else:
-                    profile = (
-                        condition.split(":", 1)[1]
-                        if ":" in condition
-                        else DEFAULT_LENGTH_PROFILE
+            # EQ is generated first because the eq_matched control reads its
+            # sentence budget off the EQ response. Shuffling the control arms
+            # among themselves keeps them from being generated in a fixed order.
+            responses: dict[str, str] = {
+                "baseline": model.generate(messages, seed=pair_seed, condition="baseline"),
+                "eq": model.generate(eq_messages, seed=pair_seed, condition="eq"),
+            }
+            rng.shuffle(controls)
+
+            for condition in controls:
+                if condition == "length_matched":
+                    condition_messages = build_length_matched_messages(
+                        messages,
+                        realization,
+                        DEFAULT_LENGTH_PROFILE,
                     )
+                elif condition == "length_matched:eq_matched":
+                    condition_messages = build_eq_matched_messages(
+                        messages,
+                        realization,
+                        responses["eq"],
+                    )
+                else:
+                    profile = condition.split(":", 1)[1]
                     condition_messages = build_length_matched_messages(
                         messages,
                         realization,
@@ -648,7 +696,7 @@ def generate_pairs(
                     "model_id": model.model_id,
                     "temperature": model.temperature,
                     "pair_seed": pair_seed,
-                    "order": conditions,
+                    "order": ["baseline", "eq", *controls],
                     "same_model_both_arms": True,
                     "annotations_used": bool(annotated),
                     "auditor_regenerations_allowed": auditor_regenerations,
@@ -691,7 +739,11 @@ def experiment_manifest(
     # Reject unknown names here as well as at generation time. The manifest is the
     # record other people read, so an unresolvable profile must not be written
     # into it and left to fail later.
-    unknown = [name for name in profiles if name not in LENGTH_CONTROL_PROFILES]
+    unknown = [
+        name
+        for name in profiles
+        if name not in LENGTH_CONTROL_PROFILES and name != EQ_MATCHED_PROFILE
+    ]
     if unknown:
         raise ValueError(
             f"Unknown length profile(s) {unknown}; expected one of "
@@ -741,6 +793,14 @@ def experiment_manifest(
             "preference outcomes, or the nuisance variable gets fitted to the "
             "result it exists to be compared against."
         ),
+        "eq_matched_arm_coupling": (
+            "When eq_matched is swept, its sentence budget is read off the EQ "
+            "response, so the control is not independent of EQ. The bias runs "
+            "toward ties, not toward an EQ win: the control receives a sentence "
+            "count and never the decision."
+        )
+        if EQ_MATCHED_PROFILE in profiles
+        else None,
         "arm_difference": (
             "EQ arm prepends only the EQ-Layer system control instruction; "
             "the original transcript is preserved identically in both arms."

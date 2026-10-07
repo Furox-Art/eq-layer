@@ -66,6 +66,9 @@ jobs:
             --output eval/results/qwen_reproducibility.json
 
       - name: Generate arms and sweep length profiles
+        # eq_matched reads its sentence budget off the EQ response, so EQ is
+        # generated before the control arms. Ordering is enforced in
+        # generate_pairs rather than left to the CLI.
         run: |
           python eval/ab_generate.py \
             artifacts/ab_heldout_120.jsonl \
@@ -77,7 +80,7 @@ jobs:
             --subtext-model artifacts/xdailydialog_subtext.joblib \
             --temperature 0 \
             --seed 42 \
-            --length-profile shortest_complete \
+            --length-profile eq_matched \
             --length-profile one_sentence \
             --length-profile two_sentence \
             --persistent-model-command \
