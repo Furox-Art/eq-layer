@@ -1,34 +1,84 @@
-# Response-Level A/B Protocol
+# Evaluation Protocol
 
-This protocol tests one claim only:
+Two claims, deliberately not the same claim, and ranked by how well each can
+actually be measured.
 
-> Does adding EQ-Layer control improve the final response from the **same base model**?
+## Primary: the routing decision
 
-It is separate from component benchmarks for intent, affect, dialogue act, or
-subtext.
+> Does EQ-Layer pick the action a careful reader would pick, on conversations
+> it has not seen?
 
-## Primary hypothesis
+Measured on the frozen external held-out set with no model backend in the
+path. Each case gets one adjudicated task move and the layer's `task_move` is
+compared against it.
 
-On held-out conversations, raters prefer the EQ-Layer response over the plain
-baseline on **overall response quality** more often than chance among non-tied
-cases.
+- unit: case-level agreement between `FactoredAction.task_move` and the
+  adjudicated move
+- statistic: binomial proportion with a Wilson 95% interval
+- headline strata: `empathetic` and `task_general` only
 
-Primary endpoint:
+`task_repair` is excluded from the headline and reported separately. It is
+selected into the held-out set by `REPAIR_PHRASES` and detected by
+`CORRECTION_MARKERS`, which share six of seven phrases, so agreement there is
+near-vacuous and would inflate a pooled number. Cases where
+`intent_kind` is `unknown` are excluded from the headline too: they land on the
+clarify/respond fallback, so pooling them hides how much agreement is a
+guessing convention.
+
+Scripts: `eval/route_heldout_eval.py`, `eval/route_score.py`.
+
+This endpoint has no length problem. The decision is an action label, not
+prose, so nothing about it can be an artefact of how much the model wrote.
+
+## Secondary: the rendered response
+
+> Does the steered model produce a response a careful reader prefers over the
+> same model without steering?
+
+This is the original claim and it is **not currently supportable**, for a
+measured reason rather than a suspected one.
+
+On the frozen 120-case set the EQ arm runs 15.1 mean words against a baseline
+at 42.9. A calibrated length-matched control was built to close that gap:
+
+- positive, count-based instructions moved length far more than negative ones;
+  prohibitions made replies longer on a small model, mean characters 97 for a
+  mild profile against 155 for the strictest
+- the ladder `shortest_complete` / `one_sentence` / `two_sentence` /
+  `three_sentence` bottoms out at **11.2 percent** off, outside the 10 percent
+  tolerance
+- `eq_matched`, which reads its sentence budget off the EQ response, made it
+  worse at 58.3 percent, because the model overshoots the requested count and
+  EQ's brevity comes from its decision rather than from a surface budget
+
+The residual is structural: a surface instruction cannot reproduce the length a
+decision-derived instruction produces. Anyone rerunning this must not read a
+preference win as an EQ effect without stating the residual.
+
+If this endpoint is pursued, the ballot compares EQ against the calibrated
+control rather than the raw baseline, and `eval/prepare_selected_ballot.py`
+names the control in the decode key so the artifact does not misdescribe it.
+Selection stays on length only; tuning the control against preference would
+fit the nuisance variable to the outcome it exists to be compared against.
+
+Note that coupling is not free: reading a per-case target off the EQ response
+pushes the two arms toward ties, which hides an EQ win rather than manufacturing
+one.
+
+### Statistics, if ratings are collected
 
 - case-level majority vote on `overall`
 - EQ win rate among non-ties
 - exact two-sided sign test against 0.5
 - Wilson 95% confidence interval
 
-Secondary endpoints:
+`intent_fidelity`, `appropriateness`, `actionability` and `non_patronizing` are
+secondary and descriptive unless a multiplicity plan is registered before
+rating.
 
-- `intent_fidelity`
-- `appropriateness`
-- `actionability`
-- `non_patronizing`
-
-Secondary endpoints are descriptive unless a separate multiplicity plan is
-registered before rating.
+Rows where both responses are identical carry no information and must be
+counted separately rather than folded into ties. One such row appeared in the
+120-case ballot (`external-036`).
 
 ## Conditions
 
@@ -67,7 +117,15 @@ analyses and must not be reported as the production EQ-Layer result.
 
 ## Raters
 
-Preferred design:
+The two endpoints need different raters and must not be pooled.
+
+**Decision endpoint.** One adjudicator per case names the task move. This is
+roughly 120 labels for the full held-out set, not 120 x 5 pairwise ratings, and
+the label is closer to objective than a quality judgement. Independent
+adjudicators are still preferred: two agreeing adjudicators, with a third for
+disagreement, beats one rater whose consistency is never checked.
+
+**Response endpoint.** The design below, if the endpoint is pursued at all.
 
 - at least 3 independent raters
 - raters see only randomized A/B responses and the original conversation
@@ -80,6 +138,20 @@ cases. Individual rater votes are not incorrectly treated as independent
 samples.
 
 Inter-rater agreement is reported with Fleiss' kappa.
+
+## Reproducibility
+
+The backend must be deterministic for the pairing rule to mean anything. At
+temperature 0 with a fixed per-case seed, CPU matmul reduction order varies
+between runs and flips the argmax at near-ties: two pilot runs of the same
+commit produced identical text for only 8 of 12 EQ arms and 7 of 12 baseline
+arms.
+
+`eval/hf_model_server.py` therefore enables deterministic algorithms and
+single-threaded execution by default. `eval/reproducibility_check.py` measures
+it rather than asserting it, sending the same payload repeatedly inside one
+process and again in a fresh one. A pilot that skips this check cannot claim a
+paired design.
 
 ## Sample-size target
 
@@ -153,10 +225,36 @@ python eval/ab_score_multi.py key.json rater1.jsonl rater2.jsonl rater3.jsonl
 A positive component benchmark is not evidence that EQ-Layer improves final
 responses.
 
-A final response-level claim should be made only after:
+Routing agreement is not evidence that EQ-Layer improves final responses
+either. It shows the decision matches an adjudicated move. Whether a better
+decision produces a better reply is a separate question, and it is currently
+the unsupported one, because the response endpoint cannot be length-matched
+below an 11 percent residual.
 
-- held-out generation is frozen
-- blinding is preserved
-- the primary endpoint is scored
-- the effect size and 95% CI are reported
-- no-go / null / mixed results are retained
+A final decision-level claim should be made only after:
+
+- the held-out set is frozen and its SHA-256 recorded
+- the ballot is blinded and the stratum exclusions are applied
+- agreement is reported with a Wilson interval
+- circular strata and unknown-intent cases are reported separately, not dropped
+  silently
+- null and mixed results are retained
+
+A final response-level claim additionally requires human ratings, and must
+state the measured length residual rather than describing the arms as matched.
+
+## Current state
+
+Measured, reproducible, and not yet a result:
+
+| item | value |
+|---|---|
+| held-out cases | 120, frozen, `d53fcaae…` |
+| routing decision cases | 120 generated, 90 in the headline after exclusions |
+| adjudicated labels | **0** |
+| response ballot | 120 rows, blinded, ratings blank |
+| length residual vs calibrated control | 11.2 percent, outside tolerance |
+| generated responses | none rated |
+
+No claim about EQ-Layer improving anything has been established. The next step
+is human adjudication of `route_gold_ballot.jsonl`, roughly one label per case.

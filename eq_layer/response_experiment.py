@@ -816,6 +816,11 @@ def experiment_manifest(
         "claim_boundary": (
             "EQ-vs-baseline mixes the deterministic decision with the surface budget "
             "it implies. Only EQ-vs-length_matched measures the deterministic layer "
-            "alone. Report both."
+            "alone, and even that leaves a measured residual: on 120 cases the best "
+            "calibrated control sat 11.2 percent off, and deriving the control's "
+            "sentence budget from the EQ response made it worse, not better, because "
+            "EQ's brevity comes from its decision rather than from a surface budget. "
+            "The primary endpoint is therefore the routing decision, scored by "
+            "eval/route_score.py, not response preference."
         ),
     }
