@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+import re
 import shlex
 import subprocess
 from dataclasses import dataclass, field
