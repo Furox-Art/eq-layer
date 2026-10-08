@@ -1,0 +1,255 @@
+{
+  "benchmark": "eq-layer-ab-latency-quality",
+  "mode": {
+    "llm_in_measured_path": false,
+    "learned_adapters_available": true,
+    "affect_adapter": "heuristic structural (no EmoBank artifact bundled)",
+    "note": "No LLM call is measured. The layer emits a control decision that is injected into the decode path; token generation is the model's cost, not the layer's. The added latency is the layer's own deterministic compute."
+  },
+  "environment": {
+    "python": "3.14.7",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "processor": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel"
+  },
+  "design": {
+    "unit": "one pass over the full case set",
+    "n_cases": 15,
+    "n_runs_per_arm": 100,
+    "n_measurements_per_arm": 1500,
+    "same_requests_both_arms": true,
+    "fixed_seed": "layer is deterministic; no sampling",
+    "warmup_passes": 2,
+    "classification_measured_independently_of_routing": true,
+    "classification_split": "intent inference vs affect/repair/interaction/reference state, timed as two separate spans inside one classification call",
+    "request_sets": {
+      "cases.jsonl": "15 seeded development cases, 4 with an expected_intent label",
+      "intent_holdout.jsonl": "36 single-turn holdout requests, all with an expected intent label"
+    }
+  },
+  "arms": {
+    "trained-tfidf-logreg-bundled": {
+      "intent_adapter": "trained-tfidf-logreg-bundled",
+      "latency_ms": {
+        "layer_on": {
+          "mean_ms": 1.1992,
+          "median_ms": 1.1628,
+          "p50_ms": 1.1627,
+          "p95_ms": 1.4642,
+          "min_ms": 0.9948,
+          "max_ms": 3.1125,
+          "n": 1500
+        },
+        "layer_off": {
+          "mean_ms": 0.0011,
+          "median_ms": 0.001,
+          "p50_ms": 0.001,
+          "p95_ms": 0.0022,
+          "min_ms": 0.0002,
+          "max_ms": 0.0126,
+          "n": 1500
+        },
+        "added": {
+          "mean_ms": 1.1981,
+          "median_ms": 1.1613,
+          "p50_ms": 1.1612,
+          "p95_ms": 1.4636,
+          "min_ms": 0.9944,
+          "max_ms": 3.112,
+          "n": 1500
+        },
+        "classification_on": {
+          "mean_ms": 1.1733,
+          "median_ms": 1.137,
+          "p50_ms": 1.137,
+          "p95_ms": 1.4305,
+          "min_ms": 0.971,
+          "max_ms": 3.0832,
+          "n": 1500
+        },
+        "routing_on": {
+          "mean_ms": 0.0255,
+          "median_ms": 0.0245,
+          "p50_ms": 0.0245,
+          "p95_ms": 0.0327,
+          "min_ms": 0.0208,
+          "max_ms": 0.0933,
+          "n": 1500
+        },
+        "classification_intent_on": {
+          "mean_ms": 1.0751,
+          "median_ms": 1.0386,
+          "p50_ms": 1.0385,
+          "p95_ms": 1.3386,
+          "min_ms": 0.9278,
+          "max_ms": 3.0366,
+          "n": 1500
+        },
+        "classification_affect_on": {
+          "mean_ms": 0.0982,
+          "median_ms": 0.0714,
+          "p50_ms": 0.0713,
+          "p95_ms": 0.1953,
+          "min_ms": 0.0377,
+          "max_ms": 1.2314,
+          "n": 1500
+        }
+      },
+      "quality": {
+        "intent_label_accuracy": {
+          "n_labelled": 4,
+          "layer_on": 1.0,
+          "layer_off": 0.0,
+          "delta": 1.0
+        },
+        "intent_holdout_accuracy": {
+          "n": 36,
+          "layer_on": 1.0
+        },
+        "appropriateness_rubric": {
+          "n_cases": 15,
+          "layer_on": 0.9917,
+          "layer_off": 0.125,
+          "delta": 0.8667
+        },
+        "communication_quality": {
+          "n_cases": 15,
+          "layer_on": 1.0,
+          "layer_off": 0.1667,
+          "delta": 0.8333
+        }
+      },
+      "per_case_added_ms": {
+        "case-001": 1.2074,
+        "case-002": 1.2705,
+        "case-003": 1.1914,
+        "case-004": 1.2958,
+        "case-005": 1.2053,
+        "case-006": 1.2021,
+        "case-007": 1.1073,
+        "case-008": 1.1986,
+        "case-009": 1.2991,
+        "case-010": 1.1415,
+        "case-011": 1.3188,
+        "case-012": 1.1344,
+        "case-013": 1.1346,
+        "case-014": 1.1825,
+        "case-015": 1.0992
+      }
+    },
+    "heuristic-zero-dependency": {
+      "intent_adapter": "heuristic-zero-dependency",
+      "latency_ms": {
+        "layer_on": {
+          "mean_ms": 0.1266,
+          "median_ms": 0.1111,
+          "p50_ms": 0.111,
+          "p95_ms": 0.2274,
+          "min_ms": 0.0442,
+          "max_ms": 0.3776,
+          "n": 1500
+        },
+        "layer_off": {
+          "mean_ms": 0.0006,
+          "median_ms": 0.0006,
+          "p50_ms": 0.0006,
+          "p95_ms": 0.0011,
+          "min_ms": 0.0002,
+          "max_ms": 0.0042,
+          "n": 1500
+        },
+        "added": {
+          "mean_ms": 0.1259,
+          "median_ms": 0.1105,
+          "p50_ms": 0.1104,
+          "p95_ms": 0.2265,
+          "min_ms": 0.0438,
+          "max_ms": 0.3764,
+          "n": 1500
+        },
+        "classification_on": {
+          "mean_ms": 0.109,
+          "median_ms": 0.0902,
+          "p50_ms": 0.0902,
+          "p95_ms": 0.2087,
+          "min_ms": 0.0292,
+          "max_ms": 0.3402,
+          "n": 1500
+        },
+        "routing_on": {
+          "mean_ms": 0.0171,
+          "median_ms": 0.0161,
+          "p50_ms": 0.0161,
+          "p95_ms": 0.022,
+          "min_ms": 0.0134,
+          "max_ms": 0.0925,
+          "n": 1500
+        },
+        "classification_intent_on": {
+          "mean_ms": 0.0271,
+          "median_ms": 0.0287,
+          "p50_ms": 0.0287,
+          "p95_ms": 0.0458,
+          "min_ms": 0.0036,
+          "max_ms": 0.1044,
+          "n": 1500
+        },
+        "classification_affect_on": {
+          "mean_ms": 0.0819,
+          "median_ms": 0.0555,
+          "p50_ms": 0.0554,
+          "p95_ms": 0.1771,
+          "min_ms": 0.0255,
+          "max_ms": 0.2776,
+          "n": 1500
+        }
+      },
+      "quality": {
+        "intent_label_accuracy": {
+          "n_labelled": 4,
+          "layer_on": 1.0,
+          "layer_off": 0.0,
+          "delta": 1.0
+        },
+        "intent_holdout_accuracy": {
+          "n": 36,
+          "layer_on": 0.2778
+        },
+        "appropriateness_rubric": {
+          "n_cases": 15,
+          "layer_on": 1.0,
+          "layer_off": 0.125,
+          "delta": 0.875
+        },
+        "communication_quality": {
+          "n_cases": 15,
+          "layer_on": 1.0,
+          "layer_off": 0.1667,
+          "delta": 0.8333
+        }
+      },
+      "per_case_added_ms": {
+        "case-001": 0.0908,
+        "case-002": 0.1751,
+        "case-003": 0.0934,
+        "case-004": 0.1684,
+        "case-005": 0.1587,
+        "case-006": 0.1594,
+        "case-007": 0.075,
+        "case-008": 0.1586,
+        "case-009": 0.2109,
+        "case-010": 0.0861,
+        "case-011": 0.2369,
+        "case-012": 0.0654,
+        "case-013": 0.0831,
+        "case-014": 0.0854,
+        "case-015": 0.0509
+      }
+    }
+  },
+  "claim_boundary": "Latency is measured for the deterministic layer only, with no LLM call in either arm. Quality is measured on the control decision the layer produces, not on generated prose: the layer-off arm has no decision to score, so its quality baseline is the empty default. These numbers show the layer's compute cost and the structural properties of its decision; they do not measure end-to-end response quality, which requires a paired human or model-level evaluation (see eval/AB_PROTOCOL.md).",
+  "invariants": {
+    "passed": true,
+    "failures": []
+  }
+}
