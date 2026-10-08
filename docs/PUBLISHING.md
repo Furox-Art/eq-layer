@@ -5,7 +5,7 @@ EQ-Layer publishes two artifacts with the same semantic version.
 - **PyPI `eq-layer`**: the Python runtime/control layer.
 - **npm `eq-layer`**: the portable Agent Skill installer and CLI bridge.
 
-Current release: **0.1.0**.
+Current release: **0.2.0**.
 
 ## PyPI automatic release flow
 

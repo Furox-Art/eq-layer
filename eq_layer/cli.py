@@ -127,7 +127,7 @@ def _route(args: argparse.Namespace) -> int:
 def _doctor() -> int:
     payload = {
         "package": "eq-layer",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "python": sys.version.split()[0],
         "ml_extra_available": True,
     }

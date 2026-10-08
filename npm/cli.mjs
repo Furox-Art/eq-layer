@@ -25,7 +25,7 @@ function die(message, code = 1) {
 }
 
 function help() {
-  console.log(`eq-layer 0.1.0
+  console.log(`eq-layer 0.2.0
 
 Usage:
   eq-layer install --all [--force] [--home PATH]
@@ -98,7 +98,7 @@ function doctor() {
   const python = findPython();
   console.log(JSON.stringify({
     npmPackage: "eq-layer",
-    version: "0.1.0",
+    version: "0.2.0",
     skillPresent: existsSync(resolve(canonicalSkill, "SKILL.md")),
     pythonRuntime: python,
     recommendation: python
@@ -125,7 +125,7 @@ const command = args.shift();
 if (!command || command === "--help" || command === "-h") {
   help();
 } else if (command === "--version" || command === "-v") {
-  console.log("0.1.0");
+  console.log("0.2.0");
 } else if (command === "install") {
   install(args);
 } else if (command === "doctor") {
