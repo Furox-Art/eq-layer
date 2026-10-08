@@ -269,6 +269,39 @@ machine-readable records are
 `eval/results/coarse_disagreement_no_go.json`, and
 `eval/results/dbdc3_breakdown_no_go.json`.
 
+### Layer compute cost and decision quality
+
+Component metrics do not say what the layer costs to run. A paired A/B run of
+the same 15 seeded requests with the layer enabled and disabled, 100 passes
+per arm, measured the layer's own deterministic compute with no LLM in either
+arm:
+
+| arm | added median (ms) | added p95 (ms) | intent holdout accuracy (36) | appropriateness rubric |
+| --- | ---: | ---: | ---: | ---: |
+| learned intent adapter | 1.1612 | 1.4636 | 1.000 | 0.9917 |
+| heuristic zero-dependency | 0.1104 | 0.2265 | 0.2778 | 1.0000 |
+
+Classification and routing are timed independently rather than lumped: with
+the learned adapter, intent inference is ~92% of classification and routing
+is ~2% of the total. The two adapters are not interchangeable — both score
+1.000 on the 4 labelled seed cases, but only the learned adapter holds up on
+the 36-case holdout. Latency is machine-dependent and moved ~9% between runs
+on the same machine, so treat the learned figure as approximately
+1.2 ms median rather than an exact constant.
+
+The measured quantity is the layer's compute cost and the structural quality
+of its decision, not response quality: there is no model in the measured path
+to generate prose. End-to-end quality still needs the paired human evaluation
+in `eval/AB_PROTOCOL.md`.
+
+```bash
+python eval/ab_latency_eval.py
+```
+
+Full methodology, tables and run-to-run variation are in
+`docs/AB_LATENCY_BENCHMARK.md`. Machine-readable record:
+`eval/results/ab-latency.json`.
+
 
 ## Evidence provenance
 
@@ -425,6 +458,7 @@ eval/
   ab_prepare.py        A/B blinding
   ab_score.py          single-rater scoring
   ab_score_multi.py    multi-rater scoring
+  ab_latency_eval.py   layer-on vs layer-off latency + decision-quality A/B
   run.py
 ```
 
