@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.2.1] - 2026-10-12
+
+### Added
+
+- `SECURITY.md` policy and `CITATION.cff` citation metadata; package metadata
+  hardened across `pyproject.toml`, `package.json`, `plugin.json`,
+  `.codex-plugin/plugin.json` and the npm launcher (`npm/cli.mjs`), which no
+  longer carries a separately hardcoded version string in three places.
+
 ## [0.2.0] - 2026-10-08
 
 ### Added
@@ -66,4 +77,5 @@ Documented honestly alongside the numbers:
   user-perceived response quality.
 - Latency is load-sensitive (~9% run-to-run variation).
 
+[0.2.1]: https://github.com/Furox-Art/eq-layer/releases/tag/v0.2.1
 [0.2.0]: https://github.com/Furox-Art/eq-layer/releases/tag/v0.2.0
