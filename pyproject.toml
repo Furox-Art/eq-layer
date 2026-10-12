@@ -13,9 +13,11 @@ keywords = [
   "agents",
   "agent-skills",
   "dialogue-management",
+  "dialogue-policy",
   "affective-computing",
   "intent-classification",
   "llm-steering",
+  "response-quality",
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -26,6 +28,8 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = []
@@ -46,7 +50,9 @@ eq-layer = "eq_layer.cli:main"
 [project.urls]
 Homepage = "https://github.com/Furox-Art/eq-layer"
 Repository = "https://github.com/Furox-Art/eq-layer"
+Changelog = "https://github.com/Furox-Art/eq-layer/blob/main/CHANGELOG.md"
 Issues = "https://github.com/Furox-Art/eq-layer/issues"
+Security = "https://github.com/Furox-Art/eq-layer/blob/main/SECURITY.md"
 
 [build-system]
 requires = ["hatchling"]

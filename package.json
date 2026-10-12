@@ -1,8 +1,9 @@
 {
   "name": "eq-layer",
   "version": "0.2.0",
-  "description": "Portable Agent Skill installer and CLI bridge for the EQ-Layer LLM response-control runtime.",
+  "description": "Portable Agent Skill installer and CLI bridge for the EQ-Layer inspectable LLM response-control runtime.",
   "type": "module",
+  "main": "npm/cli.mjs",
   "bin": {
     "eq-layer": "npm/cli.mjs"
   },
@@ -10,7 +11,9 @@
     "npm",
     "skills/eq-layer",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "SECURITY.md",
+    "CONTRIBUTING.md"
   ],
   "scripts": {
     "test": "node --check npm/cli.mjs && node npm/cli.mjs --help",
@@ -26,7 +29,10 @@
     "cursor",
     "grok",
     "dialogue-management",
-    "affective-computing"
+    "dialogue-policy",
+    "affective-computing",
+    "intent-classification",
+    "llm-steering"
   ],
   "repository": {
     "type": "git",
@@ -36,6 +42,10 @@
     "url": "https://github.com/Furox-Art/eq-layer/issues"
   },
   "homepage": "https://github.com/Furox-Art/eq-layer#readme",
+  "author": {
+    "name": "Furox-Art",
+    "url": "https://github.com/Furox-Art"
+  },
   "license": "MIT",
   "engines": {
     "node": ">=22.14.0"

@@ -12,8 +12,6 @@ Copy `.github/RFC_TEMPLATE.md` into `.github/rfcs/NNN-short-title.md` and open a
 
 ## Adding to the eval set
 
-Append one JSON object per line to `eval/cases.jsonl`:
-
 Append one line of JSON per case to `eval/cases.jsonl` — one line, not
 pretty-printed, since it is parsed line by line:
 

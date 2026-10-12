@@ -1,0 +1,109 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: >-
+  EQ-Layer: Inspectable intent, affect, repair, uncertainty, and factored-action
+  control for LLM responses
+version: "0.2.0"
+date-released: "2026-10-08"
+license: MIT
+repository-code: "https://github.com/Furox-Art/eq-layer"
+url: "https://github.com/Furox-Art/eq-layer"
+authors:
+  - name: "Furox-Art"
+keywords:
+  - llm
+  - dialogue-management
+  - affective-computing
+  - intent-classification
+  - llm-steering
+references:
+  - type: article
+    title: >-
+      EmoBank: Studying the Impact of Annotation Perspective and Representation
+      Format on Dimensional Emotion Analysis
+    authors:
+      - family-names: Buechel
+        given-names: Sven
+      - family-names: Hahn
+        given-names: Udo
+    collection-title: >-
+      Proceedings of the 15th Conference of the European Chapter of the
+      Association for Computational Linguistics (EACL 2017)
+    year: 2017
+  - type: article
+    title: "XDailyDialog: A Multilingual Parallel Dialogue Corpus"
+    authors:
+      - family-names: Liu
+        given-names: Zeming
+      - family-names: Nie
+        given-names: Ping
+      - family-names: Cai
+        given-names: Jie
+      - family-names: Wang
+        given-names: Haifeng
+      - family-names: Niu
+        given-names: Zheng-Yu
+      - family-names: Zhang
+        given-names: Peng
+      - family-names: Sachan
+        given-names: Mrinmaya
+      - family-names: Peng
+        given-names: Kaiping
+    collection-title: >-
+      Proceedings of the 61st Annual Meeting of the Association for
+      Computational Linguistics (ACL 2023)
+    year: 2023
+  - type: article
+    title: "DailyDialog: A Manually Labelled Multi-turn Dialogue Dataset"
+    authors:
+      - family-names: Li
+        given-names: Yanran
+      - family-names: Su
+        given-names: Hui
+      - family-names: Shen
+        given-names: Xin
+      - family-names: Li
+        given-names: Wenjie
+      - family-names: Cao
+        given-names: Ziqiang
+      - family-names: Niu
+        given-names: Shuzi
+    collection-title: >-
+      Proceedings of the Eighth International Joint Conference on Natural
+      Language Processing (IJCNLP 2017)
+    year: 2017
+  - type: article
+    title: "Characterizing Online Discussion Using Coarse Discourse Sequences"
+    authors:
+      - family-names: Zhang
+        given-names: Amy X.
+      - family-names: Culbertson
+        given-names: Bryan
+      - family-names: Paritosh
+        given-names: Praveen
+    collection-title: Proceedings of the 11th International AAAI Conference on Web and Social Media (ICWSM 2017)
+    year: 2017
+  - type: article
+    title: >-
+      Towards Empathetic Open-domain Conversation Models: A New Benchmark and
+      Dataset
+    authors:
+      - family-names: Rashkin
+        given-names: Hannah
+      - family-names: Smith
+        given-names: Eric Michael
+      - family-names: Li
+        given-names: Margaret
+      - family-names: Boureau
+        given-names: Y-Lan
+    collection-title: >-
+      Proceedings of the 57th Annual Meeting of the Association for
+      Computational Linguistics (ACL 2019)
+    year: 2019
+  - type: dataset
+    title: "Taskmaster-3 (Taskmaster series)"
+    authors:
+      - name: "Google Research"
+    url: "https://github.com/google-research-datasets/Taskmaster"
+    license: CC-BY-4.0
+    year: 2020
