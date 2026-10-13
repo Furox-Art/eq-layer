@@ -31,12 +31,17 @@ from eq_layer.response_experiment import (  # noqa: E402
     LENGTH_CONTROL_PROFILES,
     CommandModel,
     FullEQPipeline,
+    ModelCommandTimeout,
     experiment_manifest,
     generate_pairs,
     select_stratified_cases,
     stratum_counts,
     validate_experiment_cases,
 )
+
+# Distinct exit code so a model-command timeout is not confused with a usage
+# error (argparse uses 2) or an unhandled crash (1).
+EXIT_MODEL_TIMEOUT = 3
 
 
 DEVELOPMENT_CASES = Path(__file__).with_name("cases.jsonl").resolve()
@@ -161,16 +166,20 @@ def main() -> int:
         subtext_model=args.subtext_model,
     )
 
-    pairs = generate_pairs(
-        cases,
-        model=model,
-        pipeline=pipeline,
-        seed=args.seed,
-        allow_annotations=args.allow_oracle_annotations,
-        auditor_regenerations=args.auditor_regenerations,
-        length_matched_arm=args.length_matched_arm,
-        length_profiles=tuple(args.length_profiles or ()),
-    )
+    try:
+        pairs = generate_pairs(
+            cases,
+            model=model,
+            pipeline=pipeline,
+            seed=args.seed,
+            allow_annotations=args.allow_oracle_annotations,
+            auditor_regenerations=args.auditor_regenerations,
+            length_matched_arm=args.length_matched_arm,
+            length_profiles=tuple(args.length_profiles or ()),
+        )
+    except ModelCommandTimeout as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_MODEL_TIMEOUT
     write_jsonl(args.pairs, pairs)
 
     manifest = experiment_manifest(

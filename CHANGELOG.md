@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Audit C1 — persistent model commands can no longer hang an experiment.**
+  The persistent model-command path blocked on `readline()` with no deadline,
+  so a wedged child froze the whole experiment synchronously. The configured
+  `--timeout-seconds` (default 120s) is now enforced on the persistent path
+  as well: on expiry the child is force-killed and a typed
+  `ModelCommandTimeout` is raised. Both command modes and the package export
+  `eq_layer.ModelCommandTimeout` raise that one typed error, and
+  `eval/ab_generate.py` surfaces it as a single-line error with exit code 3
+  instead of an unhandled traceback.
+
 ## [0.2.1] - 2026-10-12
 
 ### Added
