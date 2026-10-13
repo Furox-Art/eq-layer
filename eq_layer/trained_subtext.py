@@ -392,7 +392,10 @@ class TrainedSubtext:
         except ImportError as exc:
             raise missing_joblib("Loading a trained subtext model", exc) from exc
 
-        payload = joblib.load(path)
+        try:
+            payload = joblib.load(path)
+        except ImportError as exc:
+            raise missing_ml_dependency("Loading a trained subtext model", exc) from exc
         validate_state(
             payload,
             model="TrainedSubtext",

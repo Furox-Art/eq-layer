@@ -222,7 +222,13 @@ class TrainedAffect:
             import joblib
         except ImportError as exc:
             raise missing_joblib("Loading a trained affect model", exc) from exc
-        payload = joblib.load(path)
+        try:
+            payload = joblib.load(path)
+        except ImportError as exc:
+            # Unpickling an artifact fitted on another machine needs the same
+            # optional extra, so a missing module must surface as a typed error
+            # rather than a raw traceback at request time.
+            raise missing_ml_dependency("Loading a trained affect model", exc) from exc
         validate_state(
             payload,
             model="TrainedAffect",

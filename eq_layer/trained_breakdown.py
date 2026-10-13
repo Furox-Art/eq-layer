@@ -134,7 +134,10 @@ class TrainedBreakdown:
         except ImportError as exc:
             raise missing_joblib("Loading breakdown model", exc) from exc
 
-        payload = joblib.load(path)
+        try:
+            payload = joblib.load(path)
+        except ImportError as exc:
+            raise missing_ml_dependency("Loading breakdown model", exc) from exc
         validate_state(
             payload,
             model="TrainedBreakdown",

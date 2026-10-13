@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -27,6 +28,11 @@ from eq_layer import (
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INSTALL_COMMAND = 'pip install "eq-layer[ml]"'
+ARTIFACT = Path("artifacts/model.joblib")
+
+
+def _raise_import_error(_path: str) -> object:
+    raise ModuleNotFoundError("No module named 'sklearn'")
 
 # Every scikit-learn builder in the package.
 ML_BUILDERS = (
@@ -69,6 +75,13 @@ def sklearn_missing(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def joblib_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "joblib", None)
+
+
+@pytest.fixture
+def joblib_stub(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
+    module = ModuleType("joblib")
+    monkeypatch.setitem(sys.modules, "joblib", module)
+    return module
 
 
 @pytest.mark.parametrize(("purpose", "builder"), ML_BUILDERS)
@@ -117,6 +130,20 @@ def test_artifact_savers_map_the_missing_extra_to_a_typed_error(
 ) -> None:
     with pytest.raises(OptionalDependencyError) as raised:
         adapter(**fitted).save(tmp_path / "model.joblib")
+    assert purpose in str(raised.value)
+    assert INSTALL_COMMAND in str(raised.value)
+
+
+@pytest.mark.parametrize(("purpose", "adapter"), JOBLIB_LOADERS)
+def test_unpickling_an_ml_artifact_without_the_extra_is_a_typed_error(
+    purpose: str,
+    adapter: object,
+    joblib_stub: ModuleType,
+) -> None:
+    """A foreign artifact needs the same extra while joblib rebuilds it."""
+    joblib_stub.load = _raise_import_error
+    with pytest.raises(OptionalDependencyError) as raised:
+        adapter.load(ARTIFACT)
     assert purpose in str(raised.value)
     assert INSTALL_COMMAND in str(raised.value)
 

@@ -25,9 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unhandled traceback at request time. All of them now raise the exported
   `OptionalDependencyError`, which still subclasses `ImportError` (so the CLI's
   heuristic fallback keeps working) but names the package and the install
-  command. `eq-layer route --intent-mode learned` exits with code 2 and that
+  command.   `eq-layer route --intent-mode learned` exits with code 2 and that
   message on stderr instead of a traceback, and `eq-layer doctor` prints the
-  install hint.
+  install hint. The same mapping now covers the `ImportError` joblib raises
+  while rebuilding an artifact fitted on a machine that had the extra.
 
 - **Audit M-5 — the bundled intent adapter is no longer re-fitted per call.**
   `TrainedIntent.from_bundled()` rebuilt and refit the classifier on every call
