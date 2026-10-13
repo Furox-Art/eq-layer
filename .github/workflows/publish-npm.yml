@@ -53,6 +53,25 @@ jobs:
           npm test
           npm pack --dry-run --json
       - name: Publish npm package
-        run: npm publish --access public --provenance
+        # Two credential modes, selected by whether a token is configured:
+        #   OIDC (preferred)  - no NPM_TOKEN set: npm's trusted publishing
+        #                       exchanges the job's identity token and adds a
+        #                       Sigstore provenance attestation via --provenance.
+        #   token             - NPM_TOKEN set: classic NODE_AUTH_TOKEN publish.
+        #                       Provenance is an OIDC-only attestation, so it
+        #                       is dropped in this mode rather than passed and
+        #                       failing with "cannot be used with a token".
+        #                       (npm 11 also refuses local provenance without
+        #                       an OIDC environment: "not supported for
+        #                       provider: null".)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -n "${NODE_AUTH_TOKEN}" ]; then
+            echo "npm publish in token mode (no provenance attestation)"
+            npm publish --access public --no-provenance
+          else
+            echo "npm publish via trusted publishing (OIDC, provenance on)"
+            npm publish --access public --provenance
+          fi
