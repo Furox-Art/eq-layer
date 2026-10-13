@@ -5,7 +5,7 @@ EQ-Layer publishes two artifacts with the same semantic version.
 - **PyPI `eq-layer`**: the Python runtime/control layer.
 - **npm `eq-layer`**: the portable Agent Skill installer and CLI bridge.
 
-Current release: **0.2.1**.
+Current release: **0.2.2**.
 
 ## Version source of truth
 
@@ -64,23 +64,44 @@ recovery/retry. The supplied version must still exactly match
 
 ## npm automatic release flow
 
-The npm package uses the same semantic version as PyPI. After the first npm
-publication, GitHub Releases automatically publish npm as well.
+The npm package uses the same semantic version as PyPI. A GitHub Release tagged
+`vX.Y.Z` publishes npm as well, and `.github/workflows/publish-npm.yml` verifies
+that the requested version (release tag, manual dispatch input, or
+`.npm-release-request`) exactly matches `package.json` before uploading. It then
+runs `npm test` and `npm pack --dry-run --json`.
 
-For the **first** `eq-layer@0.1.0` publication, npm requires account
-authorization because a Trusted Publisher cannot be configured until the
-package already exists in the npm registry.
+Publishing has **two credential modes, selected at run time** by whether the
+`NPM_TOKEN` secret is configured:
 
-Create a granular npm access token with:
+- **token mode** - `NPM_TOKEN` is set: the workflow publishes through the
+  classic `NODE_AUTH_TOKEN` credential with
+  `npm publish --access public --no-provenance`;
+- **OIDC mode** - no `NPM_TOKEN` is set: npm trusted publishing exchanges the
+  job's identity token and publishes with
+  `npm publish --access public --provenance`.
+
+Provenance is an OIDC-only attestation, so the `--provenance` flag is passed in
+OIDC mode only; with a token configured it would fail with "cannot be used with
+a token". The workflow installs `npm@>=11.21.0` first because older npm cannot
+request an attestation at all. The mode is a repository-settings decision, not a
+workflow edit: add or remove the secret and the next release switches.
+
+### First publication of a package
+
+The first `eq-layer@0.1.0` publication required a token because a Trusted
+Publisher cannot be configured until the package already exists in the npm
+registry. Create a granular npm access token with:
 
 - package/scope permission: **Read and write (publish and stage)**;
 - **Bypass 2FA** enabled for non-interactive CI publication;
 - the shortest practical expiry.
 
-Store it in the GitHub repository as the secret `NPM_TOKEN`. Then changing
-`.npm-release-request` to the package version triggers the first publication.
+Store it in the GitHub repository as the secret `NPM_TOKEN`. While that secret is
+present, every npm release publishes in token mode.
 
-After `eq-layer@0.1.0` exists on npm:
+### Moving to trusted publishing (optional)
+
+Once the package exists on npm:
 
 1. open the npm package settings;
 2. add a GitHub Actions Trusted Publisher;
@@ -89,12 +110,11 @@ After `eq-layer@0.1.0` exists on npm:
 5. workflow filename: `publish-npm.yml`;
 6. environment: leave blank;
 7. permit direct `npm publish`;
-8. verify a Trusted Publisher release works;
+8. verify a trusted-publishing release works;
 9. remove the long-lived `NPM_TOKEN` GitHub secret.
 
-Future GitHub Releases such as `v0.2.0` then publish to both PyPI and npm
-through their release workflows. The npm workflow verifies that the GitHub
-release version exactly matches `package.json` before uploading.
+Removing the secret is what switches the workflow to OIDC mode, so step 9 is the
+cutover. Until then token mode keeps publishing without provenance attestation.
 
 ## Release validation
 

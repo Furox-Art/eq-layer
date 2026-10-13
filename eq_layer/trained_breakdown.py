@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from ._deps import missing_joblib, missing_ml_dependency
+from .model_state import FITTED, validate_state
+
 
 def build_breakdown_pipeline():
     try:
@@ -11,10 +14,7 @@ def build_breakdown_pipeline():
         from sklearn.linear_model import SGDClassifier
         from sklearn.pipeline import FeatureUnion, Pipeline
     except ImportError as exc:
-        raise ImportError(
-            "TrainedBreakdown requires the optional ML dependencies. "
-            'Install with: pip install "eq-layer[ml]"'
-        ) from exc
+        raise missing_ml_dependency("TrainedBreakdown", exc) from exc
 
     features = FeatureUnion(
         [
@@ -115,7 +115,7 @@ class TrainedBreakdown:
         try:
             import joblib
         except ImportError as exc:
-            raise ImportError("Saving breakdown model requires joblib.") from exc
+            raise missing_joblib("Saving breakdown model", exc) from exc
 
         joblib.dump(
             {
@@ -132,9 +132,23 @@ class TrainedBreakdown:
         try:
             import joblib
         except ImportError as exc:
-            raise ImportError("Loading breakdown model requires joblib.") from exc
+            raise missing_joblib("Loading breakdown model", exc) from exc
 
-        payload = joblib.load(path)
+        try:
+            payload = joblib.load(path)
+        except ImportError as exc:
+            raise missing_ml_dependency("Loading breakdown model", exc) from exc
+        validate_state(
+            payload,
+            model="TrainedBreakdown",
+            path=path,
+            required={"model": FITTED},
+            optional={
+                "training_examples": (int,),
+                "positive_examples": (int,),
+                "threshold": (int, float),
+            },
+        )
         return cls(
             model=payload["model"],
             training_examples=int(payload.get("training_examples", 0)),

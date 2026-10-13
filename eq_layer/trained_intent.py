@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field, replace
+from functools import lru_cache
 from importlib import resources
 from pathlib import Path
 from typing import Iterable
 
+from ._deps import missing_joblib, missing_ml_dependency
 from .intent import HeuristicIntent, IntentState
 from .intent_belief import IntentBelief, decide_intent_action, fuse_dialogue_evidence
+from .model_state import FITTED, validate_state
 
 
 def build_pipeline():
@@ -17,10 +20,7 @@ def build_pipeline():
         from sklearn.linear_model import LogisticRegression
         from sklearn.pipeline import FeatureUnion, Pipeline
     except ImportError as exc:
-        raise ImportError(
-            "TrainedIntent requires the optional ML dependencies. "
-            'Install with: pip install "eq-layer[ml]"'
-        ) from exc
+        raise missing_ml_dependency("TrainedIntent", exc) from exc
 
     features = FeatureUnion(
         [
@@ -64,6 +64,62 @@ def bundled_training_records() -> list[dict]:
         return [json.loads(line) for line in fh if line.strip()]
 
 
+def bundled_records_path() -> Path:
+    """Locate the bundled corpus on the filesystem, when it has a path.
+
+    The cache key needs path+mtime so an edited corpus invalidates the memo.
+    Zipped/egg distributions expose no real path, in which case this raises and
+    the cache falls back to a stable key (a zipped corpus cannot change under
+    the running process anyway).
+    """
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        for candidate in (parent / "eq_layer" / "data", parent / "data"):
+            artifact = candidate / "intent_train.jsonl"
+            if artifact.is_file():
+                return artifact
+    raise FileNotFoundError("Bundled intent training corpus has no filesystem path.")
+
+
+def _bundled_cache_key(
+    confidence_threshold: float,
+    margin_threshold: float,
+) -> tuple[str, int, float, float]:
+    """Cache key for the bundled fit: artifact path + mtime + thresholds."""
+    try:
+        artifact = bundled_records_path()
+    except FileNotFoundError:
+        return (":resources:", 0, float(confidence_threshold), float(margin_threshold))
+    return (
+        str(artifact),
+        artifact.stat().st_mtime_ns,
+        float(confidence_threshold),
+        float(margin_threshold),
+    )
+
+
+@lru_cache(maxsize=8)
+def _fit_bundled(
+    cls: type["TrainedIntent"],
+    artifact: str,
+    mtime_ns: int,
+    confidence_threshold: float,
+    margin_threshold: float,
+) -> "TrainedIntent":
+    """Fit once per (artifact, mtime, thresholds); cached for the process."""
+    adapter = cls(
+        confidence_threshold=confidence_threshold,
+        margin_threshold=margin_threshold,
+    )
+    adapter.fit(bundled_training_records())
+    return adapter
+
+
+def clear_bundled_cache() -> None:
+    """Drop the memoised bundled fits (used by tests and long-lived processes)."""
+    _fit_bundled.cache_clear()
+
+
 @dataclass
 class TrainedIntent:
     """Trainable intent adapter.
@@ -86,12 +142,18 @@ class TrainedIntent:
         confidence_threshold: float = 0.40,
         margin_threshold: float = 0.08,
     ) -> "TrainedIntent":
-        adapter = cls(
-            confidence_threshold=confidence_threshold,
-            margin_threshold=margin_threshold,
+        """Return the bundled intent adapter, fitting it at most once.
+
+        The fit is deterministic but expensive (~seconds), so it is memoised
+        per process on (artifact path, artifact mtime, both thresholds). A
+        repeated call is O(1) and returns the *same* adapter instance, which
+        therefore has to be treated as read-only: callers must not call
+        ``fit`` on it or they would mutate every other user of the cache.
+        """
+        return _fit_bundled(
+            cls,
+            *_bundled_cache_key(confidence_threshold, margin_threshold),
         )
-        adapter.fit(bundled_training_records())
-        return adapter
 
     @classmethod
     def from_jsonl(
@@ -265,7 +327,7 @@ class TrainedIntent:
         try:
             import joblib
         except ImportError as exc:
-            raise ImportError("Saving a trained model requires joblib.") from exc
+            raise missing_joblib("Saving a trained intent model", exc) from exc
         joblib.dump(
             {
                 "model": self.model,
@@ -281,8 +343,21 @@ class TrainedIntent:
         try:
             import joblib
         except ImportError as exc:
-            raise ImportError("Loading a trained model requires joblib.") from exc
-        payload = joblib.load(path)
+            raise missing_joblib("Loading a trained intent model", exc) from exc
+        try:
+            payload = joblib.load(path)
+        except ImportError as exc:
+            raise missing_ml_dependency("Loading a trained intent model", exc) from exc
+        validate_state(
+            payload,
+            model="TrainedIntent",
+            path=path,
+            required={"model": FITTED, "confidence_threshold": (int, float)},
+            optional={
+                "margin_threshold": (int, float),
+                "training_examples": (int,),
+            },
+        )
         return cls(
             confidence_threshold=float(payload["confidence_threshold"]),
             margin_threshold=float(payload.get("margin_threshold", 0.08)),

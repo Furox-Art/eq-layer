@@ -4,7 +4,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
+from ._deps import missing_joblib, missing_ml_dependency
 from .affect import CORRECTION_MARKERS, DISCLOSURE_MARKERS, HeuristicAffect
+from .model_state import FITTED, validate_state
 from .policies import AffectState
 
 XDAILYDIALOG_COMMIT = "6e7ecf54c9f169215b4b8c18995c7aac74117127"
@@ -104,10 +106,7 @@ def build_feature_extractor():
         from sklearn.feature_extraction.text import TfidfVectorizer
         from sklearn.pipeline import FeatureUnion
     except ImportError as exc:
-        raise ImportError(
-            "TrainedSubtext requires the optional ML dependencies. "
-            'Install with: pip install "eq-layer[ml]"'
-        ) from exc
+        raise missing_ml_dependency("TrainedSubtext", exc) from exc
 
     return FeatureUnion(
         [
@@ -141,10 +140,7 @@ def build_classifier():
     try:
         from sklearn.linear_model import SGDClassifier
     except ImportError as exc:
-        raise ImportError(
-            "TrainedSubtext requires the optional ML dependencies. "
-            'Install with: pip install "eq-layer[ml]"'
-        ) from exc
+        raise missing_ml_dependency("TrainedSubtext", exc) from exc
 
     return SGDClassifier(
         loss="log_loss",
@@ -375,7 +371,7 @@ class TrainedSubtext:
         try:
             import joblib
         except ImportError as exc:
-            raise ImportError("Saving a trained subtext model requires joblib.") from exc
+            raise missing_joblib("Saving a trained subtext model", exc) from exc
 
         joblib.dump(
             {
@@ -394,9 +390,27 @@ class TrainedSubtext:
         try:
             import joblib
         except ImportError as exc:
-            raise ImportError("Loading a trained subtext model requires joblib.") from exc
+            raise missing_joblib("Loading a trained subtext model", exc) from exc
 
-        payload = joblib.load(path)
+        try:
+            payload = joblib.load(path)
+        except ImportError as exc:
+            raise missing_ml_dependency("Loading a trained subtext model", exc) from exc
+        validate_state(
+            payload,
+            model="TrainedSubtext",
+            path=path,
+            required={
+                "features": FITTED,
+                "act_model": FITTED,
+                "emotion_model": FITTED,
+            },
+            optional={
+                "training_examples": (int,),
+                "act_confidence_threshold": (int, float),
+                "emotion_confidence_threshold": (int, float),
+            },
+        )
         return cls(
             features=payload["features"],
             act_model=payload["act_model"],

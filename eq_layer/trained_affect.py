@@ -5,7 +5,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
+from ._deps import missing_joblib, missing_ml_dependency
 from .affect import HeuristicAffect
+from .model_state import FITTED, validate_state
 from .policies import AffectState
 
 EMOBANK_COMMIT = "248ce2a43e165a66d31aeaed83cff9641d6654e0"
@@ -23,10 +25,7 @@ def build_affect_pipeline():
         from sklearn.linear_model import Ridge
         from sklearn.pipeline import FeatureUnion, Pipeline
     except ImportError as exc:
-        raise ImportError(
-            "TrainedAffect requires the optional ML dependencies. "
-            'Install with: pip install "eq-layer[ml]"'
-        ) from exc
+        raise missing_ml_dependency("TrainedAffect", exc) from exc
 
     features = FeatureUnion(
         [
@@ -205,7 +204,7 @@ class TrainedAffect:
         try:
             import joblib
         except ImportError as exc:
-            raise ImportError("Saving a trained affect model requires joblib.") from exc
+            raise missing_joblib("Saving a trained affect model", exc) from exc
 
         joblib.dump(
             {
@@ -222,8 +221,25 @@ class TrainedAffect:
         try:
             import joblib
         except ImportError as exc:
-            raise ImportError("Loading a trained affect model requires joblib.") from exc
-        payload = joblib.load(path)
+            raise missing_joblib("Loading a trained affect model", exc) from exc
+        try:
+            payload = joblib.load(path)
+        except ImportError as exc:
+            # Unpickling an artifact fitted on another machine needs the same
+            # optional extra, so a missing module must surface as a typed error
+            # rather than a raw traceback at request time.
+            raise missing_ml_dependency("Loading a trained affect model", exc) from exc
+        validate_state(
+            payload,
+            model="TrainedAffect",
+            path=path,
+            required={"model": FITTED},
+            optional={
+                "training_examples": (int,),
+                "training_source": (str,),
+                "training_license": (str,),
+            },
+        )
         return cls(
             model=payload["model"],
             training_examples=int(payload.get("training_examples", 0)),

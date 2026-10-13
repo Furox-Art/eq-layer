@@ -18,6 +18,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Audit M-2/M-7 — a missing or unusable `ml` extra is now a typed error.**
+  Every optional import in `eq_layer/` (scikit-learn in the five trained-model
+  builders, joblib in every artifact save/load) raised a bare `ImportError` whose
+  install command was only free text, so a missing extra surfaced as an
+  unhandled traceback at request time. All of them now raise the exported
+  `OptionalDependencyError`, which still subclasses `ImportError` (so the CLI's
+  heuristic fallback keeps working) but names the package and the install
+  command.   `eq-layer route --intent-mode learned` exits with code 2 and that
+  message on stderr instead of a traceback, and `eq-layer doctor` prints the
+  install hint. The same mapping now covers the `ImportError` joblib raises
+  while rebuilding an artifact fitted on a machine that had the extra.
+
+- **Audit M-5 — the bundled intent adapter is no longer re-fitted per call.**
+  `TrainedIntent.from_bundled()` rebuilt and refit the classifier on every call
+  (~2.3 s each), so any request path that loads the bundled adapter paid the
+  full fit per request. The fit is now memoised per process on (artifact path,
+  artifact mtime, both thresholds), making repeated calls O(1) and refilling the
+  memo only when the corpus on disk changes.
+
+- **Audit H-2 — malformed trained-model state is rejected at load time.** The
+  artifact loaders indexed the persisted payload directly, so a missing key
+  escaped as a raw `KeyError`, a non-mapping payload as a `TypeError` from the
+  dataclass constructor, and a wrongly typed threshold was silently coerced by
+  `float()`. The schema is validated first and a typed `ModelStateError` names
+  the model, the offending field and the artifact path.
+
+- **Audit D-1 — one source of truth for the version, now guarded by a test.**
+  `pyproject.toml`, `package.json`, `plugin.json`, `.codex-plugin/plugin.json`,
+  `CITATION.cff` and `eq_layer/_version.py` all report `0.2.2` (this repository
+  has no `package-lock.json`). A new test pins them together so a future bump
+  cannot drift across the shipped manifests.
+
+- **Audit docs — `docs/PUBLISHING.md` described only the first-publication npm
+  token flow** and still named `0.2.1` as the current release. Both credential
+  modes of `publish-npm.yml` are documented now (token mode with
+  `--no-provenance`, OIDC trusted publishing with `--provenance`), with the
+  `NPM_TOKEN` secret as the switch, and `README.md` carries the same summary.
+
 - **Audit M4 — one source of truth for the version string.** The Python side
   no longer carries hardcoded copies: `eq_layer/_version.py` resolves the
   version through `importlib.metadata` when installed and reads the same

@@ -7,6 +7,8 @@ import json
 import sys
 from dataclasses import asdict
 
+from ._deps import ML_INSTALL_COMMAND, OptionalDependencyError, ml_extra_available
+
 
 def _load_messages(raw: str) -> list[dict]:
     payload = json.loads(raw)
@@ -38,9 +40,11 @@ def _intent_adapter(mode: str):
         return HeuristicIntent(), "heuristic"
     try:
         return TrainedIntent.from_bundled(), "trained-tfidf-logreg"
-    except ImportError:
+    except OptionalDependencyError:
         if mode == "learned":
             raise
+        # A missing optional extra is not a routing failure: degrade to the
+        # zero-dependency heuristic path and say which backend answered.
         return HeuristicIntent(), "heuristic-fallback-no-ml-extra"
 
 
@@ -127,16 +131,17 @@ def _route(args: argparse.Namespace) -> int:
 def _doctor() -> int:
     from . import __version__
 
+    ml_available = ml_extra_available()
     payload = {
         "package": "eq-layer",
         "version": __version__,
         "python": sys.version.split()[0],
-        "ml_extra_available": True,
+        "ml_extra_available": ml_available,
     }
-    try:
-        import sklearn  # noqa: F401
-    except ImportError:
-        payload["ml_extra_available"] = False
+    if not ml_available:
+        payload["ml_extra_hint"] = (
+            f"Optional ML dependencies are unavailable. Install with: {ML_INSTALL_COMMAND}"
+        )
     print(json.dumps(payload, indent=2))
     return 0
 
@@ -167,6 +172,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return int(args.handler(args))
+    except OptionalDependencyError as exc:
+        # A missing optional extra is a configuration problem, not a usage
+        # error: report it on stderr with the install command and exit 2
+        # without dumping the usage block on top of the actionable message.
+        print(f"{parser.prog}: error: {exc}", file=sys.stderr)
+        return 2
     except (ValueError, json.JSONDecodeError, ImportError) as exc:
         parser.error(str(exc))
     return 2

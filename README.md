@@ -519,6 +519,25 @@ detection — were tested and retained as no-go results instead of being wired
 into policy routing. The tracker exposes where labels are direct, derived,
 structural, fallback, or externally verified.
 
+## Publishing
+
+Two artifacts, one semantic version: PyPI `eq-layer` (the Python runtime and
+control layer) and npm `eq-layer` (the portable Agent Skill installer and CLI
+bridge). Each side keeps its version in exactly one canonical location, and the
+release workflows verify the GitHub release tag against those fields before
+uploading.
+
+npm publishing picks its credential mode at run time, based on repository
+settings only:
+
+- `NPM_TOKEN` configured: token mode, `npm publish --access public
+  --no-provenance`;
+- no `NPM_TOKEN`: trusted publishing over GitHub OIDC, `npm publish
+  --access public --provenance`.
+
+Provenance is an OIDC-only attestation, so it is only requested when no token is
+configured. See `docs/PUBLISHING.md` for the full flow.
+
 ## Contributing
 
 Cases are the main entry point. Open one for a failure mode you can describe concretely — especially the ones where two policies seem equally right.
