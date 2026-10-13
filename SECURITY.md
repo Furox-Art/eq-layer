@@ -25,8 +25,8 @@ model artifacts, and those are exactly the part you must trust.
 
 | Version | Supported | Notes |
 |---|---|---|
-| `0.2.x` on npm | Yes | `0.2.1` is the current release. |
-| `0.2.x` on PyPI | Yes | `0.2.1` is the current release, published with a PEP 740 attestation. |
+| `0.2.x` on npm | Yes | `0.2.2` is the current release. |
+| `0.2.x` on PyPI | Yes | `0.2.2` is the current release, published with a PEP 740 attestation. |
 | `<= 0.1.x` | No | No fixes. Reproduce on `main` and open an issue if it still reproduces. |
 
 Only the current release is exercised by CI (`.github/workflows/eval.yml` and the
