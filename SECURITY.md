@@ -1,4 +1,4 @@
-# Security Policy
+﻿# Security Policy
 
 EQ-Layer decides how a model should speak: it classifies intent, affect and
 repair, selects a response policy, compiles a factored action, steers the decode
@@ -15,7 +15,7 @@ Understanding the attack surface means not conflating these:
 | `eq_layer` library | None (optional `scikit-learn` for trained models) | Pure computation. It reads messages and emits decisions and text; it makes no network calls and runs no user-supplied code. |
 | Trained artifacts (`.joblib`) | `joblib` | `joblib` is pickle-backed. `TrainedAffect.load` / `TrainedIntent.load` / `TrainedSubtext.load` on an **untrusted** file is code execution, not data loading. |
 | Steering + auditor | Host SDK | The layer injects `system_instruction` / prompt rewrites into your generation call. It cannot constrain what the host then does with the model output. |
-| npm package (`eq-layer`) | Node >= 22.14 | `install` copies the Agent Skill into discovery roots (`~/.claude/skills/…`, `~/.codex/skills/…`, …) and `--force` removes an existing target directory first. `route` forwards arguments to `python -m eq_layer.cli`. |
+| npm package (`eq-layer`) | Node >= 22.14 | `install` copies the Agent Skill into discovery roots (`~/.claude/skills/â€¦`, `~/.codex/skills/â€¦`, â€¦) and `--force` removes an existing target directory first. `route` forwards arguments to `python -m eq_layer.cli`. |
 | PyPI package (`eq-layer`) | Python >= 3.10 | Same library surface; adds the `eq-layer` CLI entry point. |
 
 The honest summary: the library does not execute anything you hand it except
@@ -43,7 +43,7 @@ less than it looks:
 | npm `dist.signatures` | The **registry** signed the packument entry. A transport signature, not build provenance. | `npm view eq-layer dist.signatures` |
 | Build attestation | A CI run built this artifact from a named repo, workflow and commit. | see below |
 
-- **PyPI — attested.** Publishing goes through `pypa/gh-action-pypi-publish`
+- **PyPI â€” attested.** Publishing goes through `pypa/gh-action-pypi-publish`
   with `permissions: id-token: write`, so every release artifact carries a
   [PEP 740](https://peps.python.org/pep-0740/) attestation:
 
@@ -54,7 +54,7 @@ less than it looks:
   Note the URL shape: attestations are served **per file**. A `404` on this URL
   means "no such endpoint", not "no attestation".
 
-- **npm — published with `--provenance`.** `.github/workflows/publish-npm.yml`
+- **npm â€” published with `--provenance`.** `.github/workflows/publish-npm.yml`
   runs in GitHub Actions with `id-token: write`, which lets the npm CLI mint a
   Sigstore identity from the workflow rather than from the registry. The
   published artifacts carry a provenance attestation; verify it with:
@@ -82,7 +82,7 @@ published.
 
 <https://github.com/Furox-Art/eq-layer/security/advisories/new>
 
-Please do not open a public issue for a suspected vulnerability — that publishes
+Please do not open a public issue for a suspected vulnerability â€” that publishes
 a timeline for an unfixed problem. If private reporting is unavailable to you,
 open a regular issue containing only enough detail to ask for a private
 channel, and no exploit details.
@@ -110,7 +110,7 @@ channel will be arranged.
 ## In scope
 
 - **Untrusted model artifacts.** `joblib.load` reaching arbitrary code
-  execution from a crafted `.joblib` — either a fix that hardens the load path
+  execution from a crafted `.joblib` â€” either a fix that hardens the load path
   or documentation that makes the trust boundary explicit, which is what ships
   today.
 - **Structural auditor false negatives.** A response that passes `audit()`
@@ -122,7 +122,7 @@ channel will be arranged.
   policy, or an explicit user constraint, being overridden by affect-driven
   adaptation when the factually requested task is unchanged.
 - **Installer path handling.** `npm` `install` (or `tools/install_agent_skills.py`)
-  writing, deleting or following paths outside the intended target root — for
+  writing, deleting or following paths outside the intended target root â€” for
   example a target name or `--home` value that escapes the discovery directory,
   or `--force` removing something other than the skill directory.
 - **CLI argument forwarding.** `eq-layer route` arguments reaching the spawned
