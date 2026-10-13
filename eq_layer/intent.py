@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from .intent_belief import IntentBelief, IntentRiskDecision
+from .textnorm import normalise_light
 
 
 @dataclass(frozen=True)
@@ -179,7 +180,7 @@ class HeuristicIntent:
         return f'{prefix}: "{request}".{suffix}'
 
     def _normalise(self, text: str) -> str:
-        return " ".join(text.lower().split())
+        return normalise_light(text)
 
     def _first_marker(self, text: str, markers: tuple[str, ...]) -> str | None:
         for marker in markers:

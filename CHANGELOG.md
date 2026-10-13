@@ -5,7 +5,52 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-10-12
+### Housekeeping — audit hardening
+
+- Closes the findings of the full-repository audit: patched the concrete
+  defects (correctness, fail-closed behaviour, platform independence),
+  wired every standalone guard into CI, removed dead or duplicated code
+  paths, and pinned every doc claim to a test so it cannot silently
+  drift again. Regression tests fail without the corresponding fix.
+
 ## [Unreleased]
+
+### Changed
+
+- **Audit M4 — one source of truth for the version string.** The Python side
+  no longer carries hardcoded copies: `eq_layer/_version.py` resolves the
+  version through `importlib.metadata` when installed and reads the same
+  `[project] version` field from the nearest `pyproject.toml` from a source
+  checkout, and `eq_layer.__version__`, `eq-layer doctor`, and the package
+  export all use it. The npm launcher reads the canonical `version` field of
+  `package.json` at runtime through the new `npm/version.mjs` instead of
+  hardcoding it in three places. `docs/PUBLISHING.md` now documents both
+  canonical locations, and the provably stale `0.2.0` claims in
+  `SECURITY.md` and `docs/PUBLISHING.md` (current release, integrity and
+  attestation commands) now point at `0.2.1`.
+
+- **Audit H5 — one shared text-normalisation implementation.** `_normalise`
+  was copy-pasted across five modules and had drifted into two behaviours
+  (lowercase + whitespace collapse, and punctuation-to-space) with the
+  dialogue-reference matcher additionally dropping the Turkish combining dot
+  above. Both variants now live in the new `eq_layer.textnorm`
+  (`normalise_light`, `normalise_plain`), and `auditor`, `preferences`,
+  `interaction`, `intent`, and `dialogue_reference` import them instead of
+  maintaining private copies. Behaviour is unchanged on canonical cases,
+  including dotted/dotless-I matching, and is locked in by parity tests.
+
+### Fixed
+
+- **Audit C1 — persistent model commands can no longer hang an experiment.**
+  The persistent model-command path blocked on `readline()` with no deadline,
+  so a wedged child froze the whole experiment synchronously. The configured
+  `--timeout-seconds` (default 120s) is now enforced on the persistent path
+  as well: on expiry the child is force-killed and a typed
+  `ModelCommandTimeout` is raised. Both command modes and the package export
+  `eq_layer.ModelCommandTimeout` raise that one typed error, and
+  `eval/ab_generate.py` surfaces it as a single-line error with exit code 3
+  instead of an unhandled traceback.
 
 ## [0.2.1] - 2026-10-12
 
@@ -77,5 +122,48 @@ Documented honestly alongside the numbers:
   user-perceived response quality.
 - Latency is load-sensitive (~9% run-to-run variation).
 
+## [0.1.0] - 2026-10-06
+
+First public release: a control layer that gives an LLM a *decision* about how
+to speak before it speaks, instead of asking it to be more empathetic in a
+prompt.
+
+### Added
+
+- Policy taxonomy with registers and a selector over affect, intent, task,
+  repair and interaction-quality state, plus a deterministic steering compiler
+  that turns the selected decision into a system instruction.
+- Heuristic intent adapter and explicit intent state; intent-aware policy
+  selection.
+- Optional `ml` extra (`scikit-learn`): trained TF-IDF + logistic-regression
+  intent adapter with held-out evaluation and cross-validation reporting.
+- EmoBank-trained dimensional affect (valence/arousal) regression adapter
+  with a reproducible training command and benchmark.
+- XDailyDialog-trained subtext signals and a conversation tracker with
+  explicit, evidence-tiered stance tracking.
+- Higher-level subtext models for direct disagreement (Coarse Discourse) and
+  dialogue breakdown (DBDC3), each with corpus loaders, lightweight CI
+  benchmarks, and recorded no-go results where the evidence did not support
+  a claim.
+- Structural response audit of generated text against inspectable control
+  contracts, with opt-in one-shot regeneration guidance.
+- Explicit session preference state, isolated per session.
+- Conservative dialogue-reference tracking, including adversarial benchmark
+  cases.
+- Intent belief state with a Bayes-risk router, plus grouped and cellwise
+  intent risk-sensitivity audits.
+- Same-model paired response experiment engine and CLI
+  (`eval/ab_generate.py`): provider-neutral command adapter, persistent
+  model-command mode, arm-blind backends, stratified pilot selection, and a
+  held-out case preflight/validator that rejects development sets on final
+  runs.
+- Blind pairwise response evaluation core: ballot preparation, single- and
+  multi-rater scoring with Fleiss' kappa, and a preregistered protocol
+  document.
+- Agent-skill packaging for Codex, Claude, Copilot, Cursor, Grok and
+  Antigravity, plus PyPI and npm distributions published from GitHub Releases
+  through trusted publishing.
+
 [0.2.1]: https://github.com/Furox-Art/eq-layer/releases/tag/v0.2.1
 [0.2.0]: https://github.com/Furox-Art/eq-layer/releases/tag/v0.2.0
+[0.1.0]: https://github.com/Furox-Art/eq-layer/releases/tag/v0.1.0

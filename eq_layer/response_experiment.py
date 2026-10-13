@@ -6,6 +6,7 @@ import random
 import re
 import shlex
 import subprocess
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
@@ -26,6 +27,42 @@ LEAKAGE_FIELDS = {
     "expected_concepts",
     "annotated",
 }
+
+
+class ModelCommandTimeout(RuntimeError):
+    """A model command failed to answer within its configured timeout.
+
+    Raised for both the one-shot and the persistent command modes so callers
+    (including the A/B generation CLI) can catch one typed error instead of
+    pattern-matching messages. Subclasses ``RuntimeError`` like the other
+    model-command failures.
+    """
+
+
+def _force_kill(process: subprocess.Popen) -> None:
+    """Best-effort hard kill of a wedged child so its pipes close.
+
+    Used by the persistent-command timeout path and as the escalation step of
+    ``CommandModel.close``. Terminate first, then kill if the child ignores
+    it; both are no-ops when the process has already been reaped.
+    """
+    try:
+        process.terminate()
+    except OSError:
+        pass
+    try:
+        process.wait(timeout=5)
+        return
+    except subprocess.TimeoutExpired:
+        pass
+    try:
+        process.kill()
+    except OSError:
+        pass
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        pass
 
 
 def validate_experiment_cases(cases: list[dict], *, final: bool = False) -> dict:
@@ -222,14 +259,20 @@ class CommandModel:
         if self.persistent:
             raw = self._persistent_generate(payload)
         else:
-            completed = subprocess.run(
-                list(self.command),
-                input=json.dumps(payload, ensure_ascii=False),
-                text=True,
-                capture_output=True,
-                timeout=self.timeout_seconds,
-                check=False,
-            )
+            try:
+                completed = subprocess.run(
+                    list(self.command),
+                    input=json.dumps(payload, ensure_ascii=False),
+                    text=True,
+                    capture_output=True,
+                    timeout=self.timeout_seconds,
+                    check=False,
+                )
+            except subprocess.TimeoutExpired as exc:
+                raise ModelCommandTimeout(
+                    f"Model command did not respond within "
+                    f"{self.timeout_seconds} seconds: {' '.join(self.command)}"
+                ) from exc
             if completed.returncode != 0:
                 raise RuntimeError(
                     f"Model command failed ({completed.returncode}): "
@@ -261,7 +304,7 @@ class CommandModel:
 
         process.stdin.write(json.dumps(payload, ensure_ascii=False) + "\n")
         process.stdin.flush()
-        raw = process.stdout.readline().strip()
+        raw = self._read_line(process, self.timeout_seconds)
         if not raw:
             stderr = process.stderr.read().strip() if process.stderr else ""
             raise RuntimeError(
@@ -269,6 +312,40 @@ class CommandModel:
                 f"stderr={stderr}"
             )
         return raw
+
+    def _read_line(self, process: subprocess.Popen, timeout_seconds: float) -> str:
+        """Read one stdout line from the child under a wall-clock deadline.
+
+        A blocking ``readline()`` on a pipe waits until the child writes a
+        newline, and on Windows a blocked pipe read cannot be interrupted, so
+        the read runs on a daemon reader thread that is joined with the
+        configured timeout. On expiry the child is force-killed: its stdout
+        closes, the blocked read unwinds with EOF, and a wedged model command
+        can never stall the experiment synchronously.
+        """
+        stdout = process.stdout
+        if stdout is None:
+            raise RuntimeError("Persistent model command pipes are unavailable.")
+
+        lines: list[str] = []
+
+        def _read() -> None:
+            lines.append(stdout.readline())
+
+        reader = threading.Thread(
+            target=_read,
+            name="eq-layer-model-reader",
+            daemon=True,
+        )
+        reader.start()
+        reader.join(timeout_seconds)
+        if reader.is_alive():
+            _force_kill(process)
+            raise ModelCommandTimeout(
+                f"Persistent model command produced no response within "
+                f"{timeout_seconds} seconds: {' '.join(self.command)}"
+            )
+        return lines[0].strip() if lines else ""
 
     @staticmethod
     def _decode_response(raw: str) -> str:
@@ -300,12 +377,7 @@ class CommandModel:
         try:
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
-            process.terminate()
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=5)
+            _force_kill(process)
 
 
 @dataclass

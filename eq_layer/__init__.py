@@ -1,5 +1,4 @@
-__version__ = "0.2.1"
-
+from ._version import __version__
 from .affect import AffectAdapter, HeuristicAffect, load_cases
 from .auditor import AuditContext, AuditIssue, ResponseAudit, ResponseAuditor, audit_from_generation_metadata
 from .actions import FactoredAction, RealizationControls, compose_action
@@ -8,7 +7,13 @@ from .intent_belief import IntentBelief, IntentRiskDecision, decide_intent_actio
 from .interaction import InteractionQualityState, RepairState, infer_interaction_quality, infer_repair_state
 from .policies import POLICIES, REGISTRY, SUBTEXTS, AffectState, Policy, Register, Selector
 from .preferences import SessionPreferences, infer_session_preferences
-from .response_experiment import CommandModel, FullEQPipeline, generate_pairs, validate_experiment_cases
+from .response_experiment import (
+    CommandModel,
+    FullEQPipeline,
+    ModelCommandTimeout,
+    generate_pairs,
+    validate_experiment_cases,
+)
 from .steer import Steer, aggregate, score_case
 from .trained_affect import DimensionalAffect, TrainedAffect
 from .trained_intent import TrainedIntent
@@ -62,6 +67,7 @@ __all__ = [
     "AnnotationStanceResolver",
     "CommandModel",
     "FullEQPipeline",
+    "ModelCommandTimeout",
     "generate_pairs",
     "validate_experiment_cases",
     "score_case",
