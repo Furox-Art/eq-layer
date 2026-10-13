@@ -64,3 +64,20 @@ def test_no_hardcoded_version_in_package_sources() -> None:
     for source in REPO_ROOT.glob("eq_layer/*.py"):
         text = source.read_text(encoding="utf-8")
         assert _pyproject_version() not in text or source.name == "_version.py"
+
+
+def test_distribution_manifests_share_the_package_version() -> None:
+    """Audit D-1: every shipped version field must agree with pyproject."""
+    shared = _pyproject_version()
+
+    package = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))
+    assert package["version"] == shared
+
+    for manifest in ("plugin.json", ".codex-plugin/plugin.json"):
+        payload = json.loads((REPO_ROOT / manifest).read_text(encoding="utf-8"))
+        assert payload["version"] == shared, manifest
+
+    citation = (REPO_ROOT / "CITATION.cff").read_text(encoding="utf-8")
+    match = re.search(r'(?m)^version:\s*"([^"]+)"', citation)
+    assert match is not None, "CITATION.cff carries no version field"
+    assert match.group(1) == shared
