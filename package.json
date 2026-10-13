@@ -16,7 +16,7 @@
     "CONTRIBUTING.md"
   ],
   "scripts": {
-    "test": "node --check npm/cli.mjs && node npm/cli.mjs --help",
+    "test": "node --check npm/cli.mjs && node --test \"npm/*.test.mjs\" && node npm/cli.mjs --help",
     "prepack": "npm test"
   },
   "keywords": [

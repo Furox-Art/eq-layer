@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { packageVersion } from "./version.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = dirname(here);
@@ -25,7 +26,7 @@ function die(message, code = 1) {
 }
 
 function help() {
-  console.log(`eq-layer 0.2.1
+  console.log(`eq-layer ${packageVersion()}
 
 Usage:
   eq-layer install --all [--force] [--home PATH]
@@ -98,7 +99,7 @@ function doctor() {
   const python = findPython();
   console.log(JSON.stringify({
     npmPackage: "eq-layer",
-    version: "0.2.1",
+    version: packageVersion(),
     skillPresent: existsSync(resolve(canonicalSkill, "SKILL.md")),
     pythonRuntime: python,
     recommendation: python
@@ -125,7 +126,7 @@ const command = args.shift();
 if (!command || command === "--help" || command === "-h") {
   help();
 } else if (command === "--version" || command === "-v") {
-  console.log("0.2.1");
+  console.log(packageVersion());
 } else if (command === "install") {
   install(args);
 } else if (command === "doctor") {

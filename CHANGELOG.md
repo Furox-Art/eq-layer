@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Audit M4 — one source of truth for the version string.** The Python side
+  no longer carries hardcoded copies: `eq_layer/_version.py` resolves the
+  version through `importlib.metadata` when installed and reads the same
+  `[project] version` field from the nearest `pyproject.toml` from a source
+  checkout, and `eq_layer.__version__`, `eq-layer doctor`, and the package
+  export all use it. The npm launcher reads the canonical `version` field of
+  `package.json` at runtime through the new `npm/version.mjs` instead of
+  hardcoding it in three places. `docs/PUBLISHING.md` now documents both
+  canonical locations, and the provably stale `0.2.0` claims in
+  `SECURITY.md` and `docs/PUBLISHING.md` (current release, integrity and
+  attestation commands) now point at `0.2.1`.
+
 - **Audit H5 — one shared text-normalisation implementation.** `_normalise`
   was copy-pasted across five modules and had drifted into two behaviours
   (lowercase + whitespace collapse, and punctuation-to-space) with the

@@ -1,5 +1,4 @@
-__version__ = "0.2.1"
-
+from ._version import __version__
 from .affect import AffectAdapter, HeuristicAffect, load_cases
 from .auditor import AuditContext, AuditIssue, ResponseAudit, ResponseAuditor, audit_from_generation_metadata
 from .actions import FactoredAction, RealizationControls, compose_action

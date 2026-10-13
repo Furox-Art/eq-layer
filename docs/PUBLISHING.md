@@ -5,7 +5,27 @@ EQ-Layer publishes two artifacts with the same semantic version.
 - **PyPI `eq-layer`**: the Python runtime/control layer.
 - **npm `eq-layer`**: the portable Agent Skill installer and CLI bridge.
 
-Current release: **0.2.0**.
+Current release: **0.2.1**.
+
+## Version source of truth
+
+Both packages ship the same semantic version, and each side has exactly one
+canonical location for it. Do not hardcode the version anywhere else.
+
+- **PyPI (`eq-layer`):** the `version` field of the `[project]` table in
+  `pyproject.toml`. `eq_layer/_version.py` reads it through
+  `importlib.metadata` when the distribution is installed, and falls back to
+  reading the same field from the nearest `pyproject.toml` when running from a
+  source checkout. `eq_layer.__version__` and `eq-layer doctor` report that
+  value; there is no second copy in the package.
+- **npm (`eq-layer`):** the `version` field in `package.json`.
+  `npm/cli.mjs` reads it at runtime through `npm/version.mjs` (used by
+  `--version`, `doctor`, and the help text); there is no second copy in the
+  launcher.
+
+The release workflows verify that the GitHub release tag matches these fields
+before publishing, so a mismatched canonical location fails the release
+instead of shipping a wrong version.
 
 ## PyPI automatic release flow
 

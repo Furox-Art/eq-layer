@@ -25,8 +25,8 @@ model artifacts, and those are exactly the part you must trust.
 
 | Version | Supported | Notes |
 |---|---|---|
-| `0.2.x` on npm | Yes | `0.2.0` is the current release. |
-| `0.2.x` on PyPI | Yes | `0.2.0` is the current release, published with a PEP 740 attestation. |
+| `0.2.x` on npm | Yes | `0.2.1` is the current release. |
+| `0.2.x` on PyPI | Yes | `0.2.1` is the current release, published with a PEP 740 attestation. |
 | `<= 0.1.x` | No | No fixes. Reproduce on `main` and open an issue if it still reproduces. |
 
 Only the current release is exercised by CI (`.github/workflows/eval.yml` and the
@@ -48,7 +48,7 @@ less than it looks:
   [PEP 740](https://peps.python.org/pep-0740/) attestation:
 
   ```bash
-  curl -s https://pypi.org/integrity/eq-layer/0.2.0/eq_layer-0.2.0-py3-none-any.whl/provenance
+  curl -s https://pypi.org/integrity/eq-layer/0.2.1/eq_layer-0.2.1-py3-none-any.whl/provenance
   ```
 
   Note the URL shape: attestations are served **per file**. A `404` on this URL
@@ -67,12 +67,12 @@ less than it looks:
   bundle itself:
 
   ```bash
-  curl -s https://registry.npmjs.org/-/npm/v1/attestations/eq-layer@0.2.0 \
+  curl -s https://registry.npmjs.org/-/npm/v1/attestations/eq-layer@0.2.1 \
     | head -c 500
   ```
 
   If that returns `404`, verify by digest instead
-  (`npm view eq-layer@0.2.0 dist.integrity`) and treat that as integrity only.
+  (`npm view eq-layer@0.2.1 dist.integrity`) and treat that as integrity only.
 
 ## Reporting a vulnerability
 
