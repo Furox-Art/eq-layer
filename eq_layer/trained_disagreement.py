@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from ._deps import missing_joblib, missing_ml_dependency
+from .model_state import FITTED, validate_state
+
 COARSE_DISCOURSE_ARCHIVE_SHA256 = (
     "33cc25e906e677881c0031c1e134460b1e389fac707f2e52fe59b484dc6d0b61"
 )
@@ -15,10 +18,7 @@ def build_disagreement_pipeline():
         from sklearn.linear_model import SGDClassifier
         from sklearn.pipeline import FeatureUnion, Pipeline
     except ImportError as exc:
-        raise ImportError(
-            "TrainedDisagreement requires the optional ML dependencies. "
-            'Install with: pip install "eq-layer[ml]"'
-        ) from exc
+        raise missing_ml_dependency("TrainedDisagreement", exc) from exc
 
     features = FeatureUnion(
         [
@@ -120,7 +120,7 @@ class TrainedDisagreement:
         try:
             import joblib
         except ImportError as exc:
-            raise ImportError("Saving disagreement model requires joblib.") from exc
+            raise missing_joblib("Saving disagreement model", exc) from exc
 
         joblib.dump(
             {
@@ -137,9 +137,20 @@ class TrainedDisagreement:
         try:
             import joblib
         except ImportError as exc:
-            raise ImportError("Loading disagreement model requires joblib.") from exc
+            raise missing_joblib("Loading disagreement model", exc) from exc
 
         payload = joblib.load(path)
+        validate_state(
+            payload,
+            model="TrainedDisagreement",
+            path=path,
+            required={"model": FITTED},
+            optional={
+                "training_examples": (int,),
+                "positive_examples": (int,),
+                "threshold": (int, float),
+            },
+        )
         return cls(
             model=payload["model"],
             training_examples=int(payload.get("training_examples", 0)),

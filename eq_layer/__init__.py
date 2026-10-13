@@ -1,3 +1,4 @@
+from ._deps import OptionalDependencyError
 from ._version import __version__
 from .affect import AffectAdapter, HeuristicAffect, load_cases
 from .auditor import AuditContext, AuditIssue, ResponseAudit, ResponseAuditor, audit_from_generation_metadata
@@ -5,6 +6,7 @@ from .actions import FactoredAction, RealizationControls, compose_action
 from .intent import HeuristicIntent, IntentAdapter, IntentState
 from .intent_belief import IntentBelief, IntentRiskDecision, decide_intent_action, expected_loss
 from .interaction import InteractionQualityState, RepairState, infer_interaction_quality, infer_repair_state
+from .model_state import ModelStateError
 from .policies import POLICIES, REGISTRY, SUBTEXTS, AffectState, Policy, Register, Selector
 from .preferences import SessionPreferences, infer_session_preferences
 from .response_experiment import (
@@ -22,6 +24,8 @@ from .tracker import AnnotationStanceResolver, ConversationTracker, StanceDecisi
 
 __all__ = [
     "__version__",
+    "OptionalDependencyError",
+    "ModelStateError",
     "AffectAdapter",
     "AffectState",
     "audit_from_generation_metadata",
