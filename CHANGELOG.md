@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Audit H5 — one shared text-normalisation implementation.** `_normalise`
+  was copy-pasted across five modules and had drifted into two behaviours
+  (lowercase + whitespace collapse, and punctuation-to-space) with the
+  dialogue-reference matcher additionally dropping the Turkish combining dot
+  above. Both variants now live in the new `eq_layer.textnorm`
+  (`normalise_light`, `normalise_plain`), and `auditor`, `preferences`,
+  `interaction`, `intent`, and `dialogue_reference` import them instead of
+  maintaining private copies. Behaviour is unchanged on canonical cases,
+  including dotted/dotless-I matching, and is locked in by parity tests.
+
 ### Fixed
 
 - **Audit C1 — persistent model commands can no longer hang an experiment.**

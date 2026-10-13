@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from dataclasses import asdict, dataclass, replace
 
+from .textnorm import normalise_light as _normalise
+
 
 SESSION_SCOPE_PATTERNS = (
     r"\bbundan sonra\b",
@@ -42,10 +44,6 @@ class SessionPreferences:
 
     def to_dict(self) -> dict:
         return asdict(self)
-
-
-def _normalise(text: str) -> str:
-    return " ".join(text.lower().split())
 
 
 def _session_scoped(text: str) -> bool:

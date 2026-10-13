@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from .textnorm import normalise_plain
+
 
 @dataclass(frozen=True)
 class GoalCandidate:
@@ -106,8 +108,9 @@ _USER_GOAL_MARKERS = (
 
 
 def _normalise(text: str) -> str:
-    lowered = text.lower().replace("\u0307", "")
-    return " ".join(re.sub(r"[^\w\s]", " ", lowered).split())
+    # Drop the Turkish combining dot above so dotted and dotless spellings of
+    # the same word compare equal before the shared punctuation pass.
+    return normalise_plain(text, drop_combining_dot_above=True)
 
 
 def _excerpt(text: str) -> str:

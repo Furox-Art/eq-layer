@@ -4,6 +4,8 @@ import re
 from dataclasses import asdict, dataclass
 from difflib import SequenceMatcher
 
+from .textnorm import normalise_light as _normalise
+
 
 ABSOLUTE_PRIVACY_PROMISES = (
     "kimseye söylemem",
@@ -75,10 +77,6 @@ class ResponseAudit:
             "max_repeat_similarity": self.max_repeat_similarity,
             "issues": [issue.to_dict() for issue in self.issues],
         }
-
-
-def _normalise(text: str) -> str:
-    return " ".join(text.lower().split())
 
 
 def _sentence_starts(text: str) -> tuple[str, ...]:

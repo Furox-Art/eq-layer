@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 
 from .affect import CORRECTION_MARKERS
+from .textnorm import normalise_plain as _normalise
 
 
 @dataclass(frozen=True)
@@ -40,10 +41,6 @@ class InteractionQualityState:
     clarification_count: int
     evidence_level: str = "structural"
     evidence: tuple[str, ...] = ()
-
-
-def _normalise(text: str) -> str:
-    return " ".join(re.sub(r"[^\w\s]", " ", text.lower()).split())
 
 
 def _has_correction(text: str) -> bool:
