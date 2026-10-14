@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   paths, and pinned every doc claim to a test so it cannot silently
   drift again. Regression tests fail without the corresponding fix.
 
+## [0.2.3] - 2026-10-13
+
+Second-round hardening: optional dependencies (sklearn/joblib) raise a typed
+`OptionalDependencyError` with the install hint instead of a raw traceback, the
+CLI maps it to exit 2 and `doctor` names the extra; `from_bundled()` is
+process-cached (repeated routing no longer re-fits); trained-model state loaders
+validate their schema and report the offending field; version manifests are
+pinned by a parity test; PUBLISHING.md documents both npm credential modes.
+
 ## [Unreleased]
 
 ### Changed
