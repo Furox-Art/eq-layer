@@ -93,7 +93,9 @@ class HeuristicAffect:
         low = text.lower().strip()
         hits = sum(1 for m in ESCALATION_MARKERS if m in low)
         softens = sum(1 for s in SOFTENERS if s in low)
-        score = min(1.0, 0.25 + hits * 0.22 - softens * 0.12)
+        # Arousal is a [0, 1] scale: a softening-only turn must floor at 0, not
+        # go negative and hand the policy state an impossible value.
+        score = max(0.0, min(1.0, 0.25 + hits * 0.22 - softens * 0.12))
         if "?" in low or "!" in low:
             score = min(1.0, score + 0.1)
         return round(score, 3)
@@ -110,11 +112,13 @@ class HeuristicAffect:
 
     def _escalating(self, user_turns: list[str]) -> bool:
         """Three or more consecutive turns opening with a wh-word."""
-        if len(user_turns) < 3:
+        # Blank turns are not wh-word turns. Counting them let three turns in
+        # which only one or two actually opened with a wh-word read as a
+        # three-turn interrogation run. Same filter as ``_demand_pattern``.
+        recent = [t for t in user_turns[-3:] if t.strip()]
+        if len(recent) < 3:
             return False
-        return all(
-            self._first_word(t) in QUESTION_OPENERS for t in user_turns[-3:] if t.strip()
-        )
+        return all(self._first_word(t) in QUESTION_OPENERS for t in recent)
 
     def _first_word(self, text: str) -> str:
         """First token with punctuation stripped. 'Neden?' must match 'neden',

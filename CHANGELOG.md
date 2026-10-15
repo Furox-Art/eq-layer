@@ -27,6 +27,58 @@ pinned by a parity test; PUBLISHING.md documents both npm credential modes.
 
 ### Changed
 
+- **Routing decisions are now pinned by a golden table.** `tests/fixtures/route_golden.jsonl`
+  stores 25 fixed (messages, intent mode, full decision object) cases covering every
+  policy family, register and intent kind the route paths can emit, and
+  `tests/test_route_golden.py` asserts each one against `route`,
+  `_lightweight_route` and the decision core. The table also pins that selection is
+  independent of the order the policies are declared in, that repeated routing is
+  byte-identical, and that a fresh interpreter under a different `PYTHONHASHSEED`,
+  locale and encoding still produces the identical decision.
+
+- **Fallback contract pinned for 14 message sets.** The lightweight route and the full
+  learned route are now differentially tested: when a learned component's decision
+  agrees with the structural one, the two paths must emit the identical factored action,
+  steering instruction, repair/reference/interaction-quality state, stance and subtext.
+  A deliberately disagreeing stub is asserted to override that agreement, so the equality
+  cannot pass vacuously.
+
+- **Classifier determinism.** Repeat invocation and independently re-loaded stub
+  artifacts now have to produce byte-identical output for the intent posterior, the
+  learned affect state and the full learned route. The stubs are fitted-estimator
+  stand-ins loaded through the real artifact path, so the learned branches are
+  exercised without scikit-learn.
+
+- **Reproducibility of the recycling harness.** `generate_pairs` now quarantines its
+  randomness behind an injectable `rng` (still seeded from `seed`) and its timestamps
+  behind an injectable `clock` whose default is a fixed epoch, so the same experiment
+  plus the same fixture serialises to identical bytes. Each record carries
+  `generation.generated_at_epoch` from that clock.
+
+- **The README's response-policy families are listed exhaustively.** The list stopped at
+  `boundary` with an ellipsis; it now names all eight registers and a doc-guard test
+  pins the list to `Register`, along with the intent labels, the bundled-corpus labels,
+  the constraint names, the evidence levels, the layout paths and the skill's factored
+  action and runtime-mode claims.
+
+### Fixed
+
+- **A whitespace-only user turn read as a three-turn interrogation run.**
+  `HeuristicAffect._escalating` counted blank turns towards the three-consecutive
+  wh-word shape while checking only the non-blank ones, so two wh-word turns plus a
+  blank one were classified as escalating. It now filters blank turns the same way
+  `_demand_pattern` does; a genuine three-turn run still fires.
+
+- **A softening-only turn produced a negative arousal.** `_arousal` floored only the
+  upper end, so a turn made of softeners (galiba/aslında/belki) reported an arousal
+  below zero on a `[0, 1]` scale and handed the policy state an impossible value.
+
+- **`CITATION.cff` stopped declaring its version.** The 0.2.3 release commit dropped
+  the quotes around the version field, which the version-parity test reads, so the
+  suite failed on a released tag.
+
+### Housekeeping — second-round audit detail
+
 - **Audit M-2/M-7 — a missing or unusable `ml` extra is now a typed error.**
   Every optional import in `eq_layer/` (scikit-learn in the five trained-model
   builders, joblib in every artifact save/load) raised a bare `ImportError` whose

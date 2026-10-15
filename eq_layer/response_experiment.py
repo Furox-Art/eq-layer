@@ -9,7 +9,7 @@ import subprocess
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 from .auditor import audit_from_generation_metadata, regeneration_instruction
 from .policies import Selector
@@ -196,6 +196,17 @@ def stratum_counts(cases: list[dict]) -> dict[str, int]:
 def stable_case_seed(global_seed: int, case_id: str) -> int:
     digest = hashlib.sha256(f"{global_seed}:{case_id}".encode("utf-8")).digest()
     return int.from_bytes(digest[:4], "big", signed=False)
+
+
+# The experiment's own clock. Reproducibility is a property of the artifact, so
+# the wall clock must never leak into a generated record: the default is a
+# fixed epoch and callers who need a real timestamp inject their own clock.
+DEFAULT_EXPERIMENT_CLOCK_EPOCH = 0.0
+
+
+def _fixed_experiment_clock() -> float:
+    """Default experiment clock: a constant, so runs differ only by content."""
+    return DEFAULT_EXPERIMENT_CLOCK_EPOCH
 
 
 def file_sha256(path: str | Path) -> str:
@@ -654,7 +665,18 @@ def generate_pairs(
     auditor_regenerations: int = 0,
     length_matched_arm: bool = False,
     length_profiles: tuple[str, ...] | None = None,
+    rng: random.Random | None = None,
+    clock: Callable[[], float] | None = None,
 ) -> list[dict]:
+    """Generate the same-model baseline/EQ pairs for one experiment run.
+
+    Generation is deterministic: the only randomness is the control-arm
+    shuffling, seeded from ``seed``, and it is quarantined behind the injectable
+    ``rng`` so a caller can supply the same generator without re-deriving it
+    from the seed. Any timestamp is quarantined behind ``clock``, whose default
+    is a fixed epoch, so the same experiment plus the same fixture serialises
+    to identical bytes.
+    """
     if auditor_regenerations not in {0, 1}:
         raise ValueError("auditor_regenerations must be 0 or 1.")
     profiles = tuple(length_profiles or ())
@@ -665,7 +687,8 @@ def generate_pairs(
                 f"{sorted(LENGTH_CONTROL_PROFILES)}"
             )
 
-    rng = random.Random(seed)
+    rng = rng if rng is not None else random.Random(seed)
+    clock = clock if clock is not None else _fixed_experiment_clock
     output: list[dict] = []
     seen: set[str] = set()
 
@@ -769,6 +792,7 @@ def generate_pairs(
                     "model_id": model.model_id,
                     "temperature": model.temperature,
                     "pair_seed": pair_seed,
+                    "generated_at_epoch": round(float(clock()), 6),
                     "order": ["baseline", "eq", *controls],
                     "same_model_both_arms": True,
                     "annotations_used": bool(annotated),
