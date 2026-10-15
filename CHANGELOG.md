@@ -23,6 +23,29 @@ process-cached (repeated routing no longer re-fits); trained-model state loaders
 validate their schema and report the offending field; version manifests are
 pinned by a parity test; PUBLISHING.md documents both npm credential modes.
 
+## [0.2.4] - 2026-10-15
+
+Deterministic-core hardening:
+
+- Golden-decision contract: 25-row fixture covering every policy family,
+  register, intent mode and intent kind, asserting the FULL decision object;
+  deterministic across announcement order, locale, PYTHONHASHSEED and encoding
+  (a fresh interpreter re-runs the golden table).
+- Classifier determinism: repeated invocation is byte-identical (stubbed
+  estimators when sklearn/joblib are absent).
+- Fallback contract: 14 pinned fallback decision objects plus a differential
+  test proving fallback == routed decision when the model agrees.
+- `response_experiment` is reproducible: the only randomness (control-arm
+  shuffle) and the timestamp are injectable, so the same experiment + fixture
+  yields an identical verdict.
+- Five real defects fixed by those tests: arousal was allowed below zero
+  (outside the [0,1] scale), blank user turns counted as a three-turn
+  interrogation run, README's policy-family list contradicted the register
+  (this was failing on origin/main), CITATION.cff version drift.
+- Docs honesty: a guard test pins README's claims to the real code.
+
+Tests: 272 passed (106 baseline + 166 new).
+
 ## [Unreleased]
 
 ### Changed
