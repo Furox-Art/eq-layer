@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import json
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable, Protocol
+from typing import Protocol
 
+from .json_contract import loads as strict_json_loads
 from .policies import AffectState
 
 
@@ -148,7 +149,6 @@ class HeuristicAffect:
         has_prior_assistant: bool = False,
     ) -> str:
         current = user_turns[-1] if user_turns else ""
-        low = current.lower()
 
         if has_prior_assistant and self._has(current, CORRECTION_MARKERS):
             return "correction"
@@ -227,5 +227,16 @@ class HeuristicAffect:
 
 
 def load_cases(path: str) -> list[dict]:
+    cases: list[dict] = []
     with open(path, encoding="utf-8") as fh:
-        return [json.loads(line) for line in fh if line.strip()]
+        for lineno, line in enumerate(fh, start=1):
+            if not line.strip():
+                continue
+            try:
+                case = strict_json_loads(line)
+            except (ValueError, UnicodeError) as exc:
+                raise ValueError(f"{path}:{lineno}: invalid JSON case: {exc}") from exc
+            if not isinstance(case, dict):
+                raise ValueError(f"{path}:{lineno}: JSON case must be an object")
+            cases.append(case)
+    return cases

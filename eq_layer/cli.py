@@ -4,40 +4,15 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import sys
 from dataclasses import asdict
 
 from ._deps import ML_INSTALL_COMMAND, OptionalDependencyError, ml_extra_available
-
-
-def _unique_json_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
-    obj: dict[str, object] = {}
-    for key, value in pairs:
-        if key in obj:
-            raise ValueError("duplicate JSON object key in transcript")
-        obj[key] = value
-    return obj
-
-
-def _finite_json_float(value: str) -> float:
-    number = float(value)
-    if not math.isfinite(number):
-        raise ValueError("non-finite JSON value in transcript")
-    return number
-
-
-def _reject_json_constant(value: str) -> None:
-    raise ValueError(f"non-standard JSON constant: {value}")
+from .json_contract import loads as strict_json_loads
 
 
 def _load_messages(raw: str) -> list[dict]:
-    payload = json.loads(
-        raw,
-        object_pairs_hook=_unique_json_keys,
-        parse_float=_finite_json_float,
-        parse_constant=_reject_json_constant,
-    )
+    payload = strict_json_loads(raw)
     if isinstance(payload, dict):
         payload = payload.get("messages")
     if not isinstance(payload, list) or not payload:
