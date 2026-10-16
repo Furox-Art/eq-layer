@@ -9,6 +9,11 @@ on:
         description: "Version to publish, for example 0.2.0"
         required: true
         type: string
+      use_token_fallback:
+        description: "Explicitly opt into legacy token publishing (requires npm 2FA-compatible credential)"
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main]
     paths:
@@ -53,7 +58,7 @@ jobs:
           npm test
           npm pack --dry-run --json
       - name: Publish npm package
-        # Two credential modes, selected by whether a token is configured:
+        # OIDC is the default even when a legacy NPM_TOKEN secret exists.
         #   OIDC (preferred)  - no NPM_TOKEN set: npm's trusted publishing
         #                       exchanges the job's identity token and adds a
         #                       Sigstore provenance attestation via --provenance.
@@ -65,10 +70,14 @@ jobs:
         #                       an OIDC environment: "not supported for
         #                       provider: null".)
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ inputs.use_token_fallback && secrets.NPM_TOKEN || '' }}
         run: |
           set -euo pipefail
-          if [ -n "${NODE_AUTH_TOKEN}" ]; then
+          if [ "${{ inputs.use_token_fallback }}" = "true" ]; then
+            if [ -z "${NODE_AUTH_TOKEN}" ]; then
+              echo "::error::NPM_TOKEN is required for explicit token fallback."
+              exit 1
+            fi
             echo "npm publish in token mode (no provenance attestation)"
             npm publish --access public --no-provenance
           else
