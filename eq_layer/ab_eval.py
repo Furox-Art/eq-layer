@@ -6,6 +6,7 @@ import random
 from dataclasses import dataclass
 from pathlib import Path
 
+from .json_contract import loads as strict_json_loads
 
 DIMENSIONS = (
     "intent_fidelity",
@@ -17,8 +18,20 @@ DIMENSIONS = (
 
 
 def load_jsonl(path: str | Path) -> list[dict]:
+    """Read human-evaluation artifacts without ambiguous JSON interpretation."""
+    rows: list[dict] = []
     with open(path, encoding="utf-8") as fh:
-        return [json.loads(line) for line in fh if line.strip()]
+        for lineno, line in enumerate(fh, start=1):
+            if not line.strip():
+                continue
+            try:
+                row = strict_json_loads(line)
+            except (ValueError, UnicodeError) as exc:
+                raise ValueError(f"{path}:{lineno}: invalid evaluation JSON: {exc}") from exc
+            if not isinstance(row, dict):
+                raise ValueError(f"{path}:{lineno}: evaluation row must be an object")
+            rows.append(row)
+    return rows
 
 
 def write_jsonl(path: str | Path, rows: list[dict]) -> None:
@@ -89,7 +102,9 @@ class PreferenceSummary:
     exact_p_two_sided: float | None
 
 
-def _wilson_interval(successes: int, total: int, z: float = 1.959963984540054) -> tuple[float, float]:
+def _wilson_interval(
+    successes: int, total: int, z: float = 1.959963984540054
+) -> tuple[float, float]:
     if total <= 0:
         raise ValueError("Wilson interval requires total > 0.")
     p = successes / total
@@ -141,6 +156,20 @@ def summarize(wins: int, losses: int, ties: int) -> PreferenceSummary:
     )
 
 
+def _validate_decode_arms(case_id: str, key: dict) -> dict[str, str]:
+    """A blinded pair must decode to one EQ arm and one control arm."""
+    mapping = key.get(case_id)
+    if mapping is None:
+        raise ValueError(f"Missing decode key for case: {case_id}")
+    if (
+        not isinstance(mapping, dict)
+        or set(mapping) != {"A", "B"}
+        or {mapping["A"], mapping["B"]} != {"eq", "baseline"}
+    ):
+        raise ValueError(f"Invalid or non-blinded decode key for case: {case_id}")
+    return mapping
+
+
 def score_blinded(
     rated_ballot: list[dict],
     key: dict,
@@ -152,15 +181,17 @@ def score_blinded(
         for dimension in DIMENSIONS
     }
     excluded: list[str] = []
+    seen_ids: set[str] = set()
 
     for row in rated_ballot:
         case_id = str(row["id"])
+        if case_id in seen_ids:
+            raise ValueError(f"Duplicate case id in rated ballot: {case_id}")
+        seen_ids.add(case_id)
         if exclude_ids and case_id in exclude_ids:
             excluded.append(case_id)
             continue
-        if case_id not in key:
-            raise ValueError(f"Missing decode key for case: {case_id}")
-
+        arm_mapping = _validate_decode_arms(case_id, key)
         ratings = row.get("ratings") or {}
         for dimension in DIMENSIONS:
             vote = str(ratings.get(dimension, "")).strip().upper()
@@ -173,7 +204,7 @@ def score_blinded(
                 counts[dimension]["ties"] += 1
                 continue
 
-            winner = key[case_id][vote]
+            winner = arm_mapping[vote]
             if winner == "eq":
                 counts[dimension]["wins"] += 1
             elif winner == "baseline":
@@ -204,8 +235,7 @@ def score_blinded(
 
 def _decoded_vote(row: dict, key: dict, dimension: str) -> str:
     case_id = str(row["id"])
-    if case_id not in key:
-        raise ValueError(f"Missing decode key for case: {case_id}")
+    arm_mapping = _validate_decode_arms(case_id, key)
     ratings = row.get("ratings") or {}
     vote = str(ratings.get(dimension, "")).strip().upper()
     if vote == "TIE":
@@ -214,7 +244,7 @@ def _decoded_vote(row: dict, key: dict, dimension: str) -> str:
         raise ValueError(
             f"{case_id}/{dimension}: expected A, B, or tie; got {vote!r}"
         )
-    winner = key[case_id][vote]
+    winner = arm_mapping[vote]
     if winner not in {"eq", "baseline"}:
         raise ValueError(f"Invalid decode key target: {winner}")
     return winner
