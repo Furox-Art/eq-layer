@@ -4,14 +4,40 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from dataclasses import asdict
 
 from ._deps import ML_INSTALL_COMMAND, OptionalDependencyError, ml_extra_available
 
 
+def _unique_json_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    obj: dict[str, object] = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError("duplicate JSON object key in transcript")
+        obj[key] = value
+    return obj
+
+
+def _finite_json_float(value: str) -> float:
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("non-finite JSON value in transcript")
+    return number
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-standard JSON constant: {value}")
+
+
 def _load_messages(raw: str) -> list[dict]:
-    payload = json.loads(raw)
+    payload = json.loads(
+        raw,
+        object_pairs_hook=_unique_json_keys,
+        parse_float=_finite_json_float,
+        parse_constant=_reject_json_constant,
+    )
     if isinstance(payload, dict):
         payload = payload.get("messages")
     if not isinstance(payload, list) or not payload:
@@ -20,12 +46,18 @@ def _load_messages(raw: str) -> list[dict]:
     for index, item in enumerate(payload):
         if not isinstance(item, dict):
             raise ValueError(f"message {index} must be an object")
-        role = str(item.get("role") or "")
-        content = str(item.get("content") or "")
-        if role not in {"user", "assistant", "system"}:
+        role = item.get("role")
+        content = item.get("content")
+        if not isinstance(role, str) or role not in {"user", "assistant", "system"}:
             raise ValueError(f"message {index} has unsupported role {role!r}")
+        if not isinstance(content, str):
+            raise ValueError(f"message {index} content must be a string")
         if not content.strip():
             raise ValueError(f"message {index} has empty content")
+        try:
+            content.encode("utf-8")
+        except UnicodeError as exc:
+            raise ValueError(f"message {index} content must be valid UTF-8") from exc
         messages.append({"role": role, "content": content})
     if not any(message["role"] == "user" for message in messages):
         raise ValueError("Transcript must contain at least one user turn.")
