@@ -59,10 +59,10 @@ jobs:
           npm pack --dry-run --json
       - name: Publish npm package
         # OIDC is the default even when a legacy NPM_TOKEN secret exists.
-        #   OIDC (preferred)  - no NPM_TOKEN set: npm's trusted publishing
-        #                       exchanges the job's identity token and adds a
-        #                       Sigstore provenance attestation via --provenance.
-        #   token             - NPM_TOKEN set: classic NODE_AUTH_TOKEN publish.
+        #   OIDC (default)   - trusted publishing exchanges the job's identity
+        #                      token and adds a provenance attestation.
+        #   token (manual)   - workflow_dispatch with use_token_fallback=true
+        #                      uses the NPM_TOKEN secret explicitly.
         #                       Provenance is an OIDC-only attestation, so it
         #                       is dropped in this mode rather than passed and
         #                       failing with "cannot be used with a token".
