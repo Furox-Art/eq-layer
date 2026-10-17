@@ -1,15 +1,14 @@
 from __future__ import annotations
 
+import math
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from ._deps import missing_joblib, missing_ml_dependency
 from .model_state import FITTED, validate_state
 
-COARSE_DISCOURSE_ARCHIVE_SHA256 = (
-    "33cc25e906e677881c0031c1e134460b1e389fac707f2e52fe59b484dc6d0b61"
-)
+COARSE_DISCOURSE_ARCHIVE_SHA256 = "33cc25e906e677881c0031c1e134460b1e389fac707f2e52fe59b484dc6d0b61"
 
 
 def build_disagreement_pipeline():
@@ -72,7 +71,7 @@ class TrainedDisagreement:
     threshold: float = 0.70
     name: str = "trained-coarse-discourse-disagreement"
 
-    def fit(self, records: Iterable[object]) -> "TrainedDisagreement":
+    def fit(self, records: Iterable[object]) -> TrainedDisagreement:
         rows = list(records)
         if not rows:
             raise ValueError("Disagreement training requires at least one record.")
@@ -81,9 +80,7 @@ class TrainedDisagreement:
         labels = [1 if str(row.label).lower() == "disagreement" else 0 for row in rows]
         positives = sum(labels)
         if positives < 100:
-            raise ValueError(
-                f"Too few disagreement examples for training: {positives}"
-            )
+            raise ValueError(f"Too few disagreement examples for training: {positives}")
 
         self.model = build_disagreement_pipeline()
         self.model.fit(texts, labels)
@@ -105,6 +102,15 @@ class TrainedDisagreement:
             else reply_text.strip()
         )
         probability = float(self.model.predict_proba([model_text])[0][1])
+        if not math.isfinite(probability) or not 0.0 <= probability <= 1.0:
+            raise ValueError("classifier probability must be finite and in [0, 1]")
+        if (
+            isinstance(self.threshold, bool)
+            or not isinstance(self.threshold, (int, float))
+            or not math.isfinite(self.threshold)
+            or not 0.0 <= self.threshold <= 1.0
+        ):
+            raise ValueError("classifier threshold must be finite and in [0, 1]")
         return DisagreementDecision(
             probability=round(probability, 4),
             is_disagreement=probability >= self.threshold,
@@ -133,7 +139,7 @@ class TrainedDisagreement:
         )
 
     @classmethod
-    def load(cls, path: str | Path) -> "TrainedDisagreement":
+    def load(cls, path: str | Path) -> TrainedDisagreement:
         try:
             import joblib
         except ImportError as exc:
