@@ -5,7 +5,6 @@ from dataclasses import asdict, dataclass, replace
 
 from .textnorm import normalise_light as _normalise
 
-
 SESSION_SCOPE_PATTERNS = (
     r"\bbundan sonra\b",
     r"\bbu sohbet(?:te| boyunca)\b",
@@ -51,8 +50,7 @@ def _session_scoped(text: str) -> bool:
     if any(re.search(pattern, low) for pattern in SESSION_SCOPE_PATTERNS):
         return True
     return bool(
-        STRONG_TURKISH_STYLE_PATTERN.search(low)
-        or STRONG_ENGLISH_STYLE_PATTERN.search(low)
+        STRONG_TURKISH_STYLE_PATTERN.search(low) or STRONG_ENGLISH_STYLE_PATTERN.search(low)
     )
 
 
@@ -60,7 +58,7 @@ def _updates(text: str) -> dict:
     low = _normalise(text)
     updates: dict[str, object] = {}
 
-    if re.search(r"\b(kısa|öz|brief|concise)\b", low):
+    if re.search(r"\b(kısa|öz|brief|briefly|concise)\b", low):
         updates["verbosity"] = "low"
     if re.search(r"\b(detaylı|ayrıntılı|detailed)\b|\bin detail\b", low):
         updates["verbosity"] = "high"
@@ -68,12 +66,7 @@ def _updates(text: str) -> dict:
     if re.search(r"\b(net|direkt|doğrudan|direct)\b|\bstraight to the point\b", low):
         updates["directness"] = "high"
 
-    if (
-        "tahmin etme" in low
-        or "uydurma" in low
-        or "don't guess" in low
-        or "do not guess" in low
-    ):
+    if "tahmin etme" in low or "uydurma" in low or "don't guess" in low or "do not guess" in low:
         updates["no_guess"] = True
 
     if (
