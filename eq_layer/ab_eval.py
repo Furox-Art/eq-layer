@@ -60,15 +60,25 @@ def prepare_blinded(
 
     seen: set[str] = set()
     for row in pairs:
-        case_id = str(row["id"])
+        case_id = row["id"]
+        if not isinstance(case_id, str) or not case_id.strip():
+            raise ValueError("A/B case id must be a non-empty string")
         if case_id in seen:
             raise ValueError(f"Duplicate A/B case id: {case_id}")
         seen.add(case_id)
 
-        baseline = str(row["baseline"])
-        eq_response = str(row["eq"])
-        if not baseline.strip() or not eq_response.strip():
-            raise ValueError(f"Empty response in A/B case: {case_id}")
+        baseline = row["baseline"]
+        eq_response = row["eq"]
+        if (
+            not isinstance(baseline, str)
+            or not isinstance(eq_response, str)
+            or not baseline.strip()
+            or not eq_response.strip()
+        ):
+            raise ValueError(f"A/B responses must be non-empty strings: {case_id}")
+        source = row.get("source") or {}
+        if not isinstance(source, dict):
+            raise ValueError(f"A/B case source must be an object: {case_id}")
 
         eq_is_a = bool(rng.getrandbits(1))
         response_a = eq_response if eq_is_a else baseline
@@ -80,7 +90,7 @@ def prepare_blinded(
         ballot.append(
             {
                 "id": case_id,
-                "stratum": (row.get("source") or {}).get("stratum"),
+                "stratum": source.get("stratum"),
                 "context": row.get("context", []),
                 "response_A": response_a,
                 "response_B": response_b,
@@ -305,6 +315,8 @@ def score_multiple_blinded(
         rows_by_rater[rater_id] = mapping
 
     assert case_ids is not None
+    if not case_ids:
+        raise ValueError("Multi-rater scoring requires at least one rated case.")
     report = {
         "design": "blind-pairwise-multi-rater-human-evaluation",
         "n_raters": len(rated_ballots),
