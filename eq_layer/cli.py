@@ -186,8 +186,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{parser.prog}: error: {exc}", file=sys.stderr)
         return 2
     except (ValueError, json.JSONDecodeError, ImportError) as exc:
+        # ArgumentParser.error terminates with SystemExit(2).
         parser.error(str(exc))
-    return 2
 
 
 if __name__ == "__main__":

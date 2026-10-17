@@ -69,7 +69,18 @@ JOBLIB_SAVERS = (
 
 @pytest.fixture
 def sklearn_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setitem(sys.modules, "sklearn", None)
+    # Intercept the import itself: a prior real-ML test may already have
+    # imported sklearn.feature_extraction and its submodules.
+    import builtins
+
+    original = builtins.__import__
+
+    def blocked(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "sklearn" or name.startswith("sklearn."):
+            raise ModuleNotFoundError("No module named 'sklearn'")
+        return original(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", blocked)
 
 
 @pytest.fixture

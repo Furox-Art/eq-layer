@@ -215,12 +215,11 @@ def score_blinded(
                 continue
 
             winner = arm_mapping[vote]
+            # _validate_decode_arms already proves the target is eq or baseline.
             if winner == "eq":
                 counts[dimension]["wins"] += 1
-            elif winner == "baseline":
-                counts[dimension]["losses"] += 1
             else:
-                raise ValueError(f"Invalid decode key target: {winner}")
+                counts[dimension]["losses"] += 1
 
     report = {
         "design": "blind-pairwise-human-evaluation",
@@ -254,10 +253,8 @@ def _decoded_vote(row: dict, key: dict, dimension: str) -> str:
         raise ValueError(
             f"{case_id}/{dimension}: expected A, B, or tie; got {vote!r}"
         )
-    winner = arm_mapping[vote]
-    if winner not in {"eq", "baseline"}:
-        raise ValueError(f"Invalid decode key target: {winner}")
-    return winner
+    # _validate_decode_arms has already rejected every other mapping target.
+    return arm_mapping[vote]
 
 
 def _fleiss_kappa(case_votes: list[list[str]]) -> float | None:

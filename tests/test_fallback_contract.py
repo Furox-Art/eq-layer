@@ -126,6 +126,15 @@ def patched_pipeline_load(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         FullEQPipeline, "load", classmethod(lambda cls, affect, subtext, **kwargs: _pipeline())
     )
+    # These fixtures explicitly test the absent-ML fallback even on hosts
+    # where real scikit-learn is installed for other independent test cases.
+    from eq_layer._deps import OptionalDependencyError
+    from eq_layer.trained_intent import TrainedIntent
+
+    def unavailable(cls, *args, **kwargs):
+        raise OptionalDependencyError("fallback-only reference fixture")
+
+    monkeypatch.setattr(TrainedIntent, "from_bundled", classmethod(unavailable))
 
 
 @pytest.fixture()

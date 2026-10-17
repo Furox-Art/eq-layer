@@ -19,8 +19,6 @@ from .trained_affect import TrainedAffect
 from .trained_intent import TrainedIntent
 from .trained_subtext import TrainedSubtext
 
-
-
 LEAKAGE_FIELDS = {
     "expected_policy",
     "expected_intent",
@@ -162,17 +160,16 @@ def select_stratified_cases(cases: list[dict], limit: int) -> list[dict]:
             deficit += quotas[stratum] - available
             quotas[stratum] = available
 
+    # target <= len(cases), and quota sums to target. Therefore when a
+    # deficit exists, at least one stratum has spare capacity; an exhausted
+    # full pass is mathematically impossible for valid inputs.
     while deficit > 0:
-        progressed = False
         for stratum in strata:
             if quotas[stratum] < len(groups[stratum]):
                 quotas[stratum] += 1
                 deficit -= 1
-                progressed = True
                 if deficit == 0:
                     break
-        if not progressed:
-            break
 
     selected: list[dict] = []
     max_quota = max(quotas.values(), default=0)
@@ -360,7 +357,7 @@ class CommandModel:
 
     @staticmethod
     def _decode_response(raw: str) -> str:
-        if not raw:
+        if not raw.strip():
             raise RuntimeError("Model command returned an empty response.")
 
         try:

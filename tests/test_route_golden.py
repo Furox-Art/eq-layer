@@ -123,6 +123,19 @@ def _annotated_route(messages: list[dict], annotated: dict) -> tuple[object, Ste
     return selection, steer
 
 
+@pytest.fixture(autouse=True)
+def deterministic_missing_ml_extra(monkeypatch: pytest.MonkeyPatch) -> None:
+    # These golden fixtures were recorded for the optional-ML-absent route.
+    # Make the dependency state explicit rather than depending on the host.
+    from eq_layer._deps import OptionalDependencyError
+    from eq_layer.trained_intent import TrainedIntent
+
+    def unavailable(cls, *args, **kwargs):
+        raise OptionalDependencyError("Golden no-ML fixture")
+
+    monkeypatch.setattr(TrainedIntent, "from_bundled", classmethod(unavailable))
+
+
 # --- the table ------------------------------------------------------------
 
 
@@ -370,6 +383,10 @@ def test_a_fresh_interpreter_under_a_different_environment_agrees(
         "import json,sys;"
         f"sys.path.insert(0, {str(REPO_ROOT)!r});"
         "from eq_layer import cli;"
+        "from eq_layer.trained_intent import TrainedIntent;"
+        "from eq_layer._deps import OptionalDependencyError;"
+        "TrainedIntent.from_bundled=classmethod("
+        "lambda cls:(_ for _ in ()).throw(OptionalDependencyError('no-ML golden')));"
         "rows=json.load(sys.stdin);"
         "print(json.dumps([cli._lightweight_route(row['messages'], row['intent_mode'])"
         " for row in rows], ensure_ascii=True, sort_keys=True))"
