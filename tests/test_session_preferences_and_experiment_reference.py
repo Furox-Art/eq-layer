@@ -157,3 +157,12 @@ def test_case_seed_is_stable_and_separates_case_identifiers() -> None:
     assert stable_case_seed(42, "a") == stable_case_seed(42, "a")
     assert stable_case_seed(42, "a") != stable_case_seed(42, "b")
     assert 0 <= stable_case_seed(42, "a") < 2**32
+
+
+def test_scoped_but_unrecognized_instruction_does_not_invent_preferences() -> None:
+    # The utterance is explicitly session-scoped but carries no known
+    # verbosity/scope/guessing control. It must not create phantom evidence.
+    state = infer_session_preferences(
+        [{"role": "user", "content": "From now on, use a blue background."}]
+    )
+    assert state == SessionPreferences()

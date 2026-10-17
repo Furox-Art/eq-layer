@@ -215,3 +215,114 @@ def test_corpus_download_uses_declared_endpoint_and_request_headers(
         assert reader.download_archive() == b"fixture"
     assert opened[0][1]
     assert opened[0][2] > 0
+
+
+def test_dbdc3_empty_annotations_and_unsupported_dialogue_rows() -> None:
+    turn = dbdc3.BreakdownTurn(
+        source_file="memory",
+        split="unknown",
+        dialogue_id="d",
+        turn_index=0,
+        text="reply",
+        context=(),
+        counts={},
+    )
+    assert turn.model_text == "reply"
+    assert turn.score == 0.0
+    assert not turn.hard_breakdown
+
+    archive = _zip(
+        **{
+            "archive/DBDC3/en/other/file.json": [
+                "invalid dialogue",
+                {
+                    "turns": [
+                        "not an object",
+                        {"speaker": "S", "utterance": "Not rated", "annotations": []},
+                        {
+                            "speaker": "S",
+                            "utterance": "Rated",
+                            "annotations": [None, {"breakdown": "T"}],
+                        },
+                        {"speaker": "U", "utterance": ""},
+                    ]
+                },
+            ]
+        }
+    )
+    parsed, metadata = dbdc3.parse_english_turns(archive)
+    assert len(parsed) == 1
+    assert parsed[0].split == "unknown"
+    assert parsed[0].dialogue_id == "file"
+    assert parsed[0].turn_index == 2
+    assert parsed[0].counts == {"T": 1}
+    assert metadata["effective_english_json_members"] == 1
+
+
+def test_dialogbank_structured_parser_rejects_incomplete_annotation_edges() -> None:
+    distractors = """
+      <w>No id</w>
+      <spanGrp type="unrelated" xml:id="other"><span from="#w1"/></spanGrp>
+      <spanGrp type="functionalVerbalSegment"><span from="#w1"/></spanGrp>
+      <spanGrp type="functionalVerbalSegment" xml:id="s_bad">
+        <notSpan from="#w1"/><span/><span from="#w1" to="#w1"/>
+      </spanGrp>
+      <fs type="unrelated" xml:id="other_fs"><f name="verbalComponent" fVal="#s1"/></fs>
+      <fs type="functionalSegment"><f name="verbalComponent" fVal="#s1"/></fs>
+      <fs type="functionalSegment" xml:id="fs_bad"><f name="wrong" fVal="#s1"/></fs>
+      <dialogueAct dimension="Task" target="#f1"/>
+      <dialogueAct dimension="Task" communicativeFunction="Inform"/>
+      <dialogueAct dimension="Task" communicativeFunction="Inform" target="#absent"/>
+    """
+    source = XML.replace('<w xml:id="w1">', distractors + '<w xml:id="w1">')
+    examples = dialogbank_iso.parse_diaml(source, "structured")
+    assert len(examples) == 1
+    assert examples[0].text == "Please continue"
+    assert examples[0].function == "Request"
+
+
+def test_dialogbank_legacy_parser_rejects_incomplete_annotation_edges() -> None:
+    distractors = """
+      <w>No id</w>
+      <spanGrp type="unrelated" xml:id="other"><span from="#w1"/></spanGrp>
+      <spanGrp type="functionalVerbalSegment"><span from="#w1"/></spanGrp>
+      <spanGrp type="functionalVerbalSegment" xml:id="s_bad">
+        <span/><span to="#w2"/><span from="#w1" to="#w1"/>
+      </spanGrp>
+      <fs type="unrelated" xml:id="other_fs"><f name="verbalComponent" fVal="#s1"/></fs>
+      <fs type="functionalSegment"><f name="verbalComponent" fVal="#s1"/></fs>
+      <fs type="functionalSegment" xml:id="fs_bad"><f name="wrong" fVal="#s1"/></fs>
+      <dialogueAct dimension="Task" target="#f1"/>
+      <dialogueAct dimension="Task" communicativeFunction="Inform"/>
+      <dialogueAct dimension="Task" communicativeFunction="Inform" target="#absent"/>
+    """
+    source = XML.replace('<w xml:id="w1">', distractors + '<w xml:id="w1">')
+    examples = dialogbank_iso.parse_diaml(source + "<broken", "legacy")
+    assert len(examples) == 1
+    assert examples[0].text == "Please continue"
+
+
+def test_dialogbank_empty_and_duplicate_links_do_not_create_fake_samples(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pages = iter(["<div>No link</div><a>No href</a>", "<a href=''></a>", "", ""])
+    monkeypatch.setattr(dialogbank_iso, "fetch_text", lambda _: next(pages))
+    assert dialogbank_iso.discover_diaml_urls() == []
+    monkeypatch.setattr(dialogbank_iso, "discover_diaml_urls", lambda: ["one", "two"])
+    calls = []
+
+    def read(url: str) -> str:
+        calls.append(url)
+        return XML
+
+    monkeypatch.setattr(dialogbank_iso, "fetch_text", read)
+    examples = dialogbank_iso.load_dialogbank_english()
+    assert len(examples) == 2
+    assert calls == ["one", "two"]
+
+
+def test_dialogbank_repair_strips_forbidden_xml_controls_only() -> None:
+    result = dialogbank_iso._repair_xml_text("a\x01\t\n& text &amp; end")
+    assert "\x01" not in result
+    assert "\t\n" in result
+    assert "&amp; text &amp; end" in result
