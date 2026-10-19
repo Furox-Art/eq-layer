@@ -6,10 +6,11 @@
 //
 // Usage: node tools/crosscheck.js
 
-const { spawnSync } = require("child_process");
-const path = require("path");
+import { spawnSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = path.join(__dirname, "..");
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const candidates = process.platform === "win32"
   ? [["py", ["-3"]], ["python", []], ["python3", []]]
   : [["python3", []], ["python", []]];
