@@ -1,6 +1,6 @@
 name: Case
 description: Add a transcript where two policies seem equally right, or where the current behaviour is clearly wrong
-labels: [case, good-first-issue]
+labels: [case, "good first issue"]
 body:
   - type: textarea
     id: transcript
