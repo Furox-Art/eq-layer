@@ -4,7 +4,7 @@ title: >-
   EQ-Layer: Inspectable intent, affect, repair, uncertainty, and factored-action
   control for LLM responses
 version: "0.2.4"
-date-released: "2026-10-08"
+date-released: "2026-10-15"
 license: MIT
 repository-code: "https://github.com/Furox-Art/eq-layer"
 url: "https://github.com/Furox-Art/eq-layer"
