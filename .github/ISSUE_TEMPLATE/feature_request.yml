@@ -1,0 +1,103 @@
+name: Feature request
+description: Propose a capability, metric, integration, or documentation change
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read CONTRIBUTING.md first. Cases are the main entry point: a transcript
+        where the current behaviour is wrong is more useful than a policy idea
+        on its own. Policy changes go through an RFC before a pull request.
+
+        A policy that cannot lose cannot be evaluated, so say where the
+        proposal would be the wrong move.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What cannot be done today
+      description: Describe the situation, not the solution. Which transcript, case id, or workflow shows the gap?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: The interface you have in mind, such as a policy, precondition, metric, CLI command, or packaging change.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Area
+      options:
+        - New or changed policy (RFC required)
+        - Selector precondition or tie-breaking
+        - Scorer or evaluation metric
+        - Affect, intent, repair, or interaction model
+        - Steering or response auditor
+        - CLI, npm package, or Agent Skill packaging
+        - Evaluation harness or dataset
+        - Documentation
+        - Performance
+    validations:
+      required: true
+
+  - type: dropdown
+    id: routing
+    attributes:
+      label: Does this change policy routing?
+      options:
+        - "Yes, and an RFC is linked below"
+        - "Yes, but I need help drafting the RFC"
+        - "No"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: input
+    id: rfc
+    attributes:
+      label: RFC or case link
+      description: Link to `.github/rfcs/NNN-short-title.md`, an existing case, or the related issue.
+    validations:
+      required: false
+
+  - type: textarea
+    id: counter-case
+    attributes:
+      label: Where would this be the wrong move?
+      description: Name a transcript or case where this proposal should lose. Required for policy changes.
+    validations:
+      required: false
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: How would this be evaluated?
+      description: Name the case, metric, or harness result that would show the change works, including negative results.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: integrity
+    attributes:
+      label: How this keeps the evaluation honest
+      description: Tick what applies. If none apply, explain why in the proposal or evidence section.
+      options:
+        - label: I did not weaken a score or adjust a case to make it pass.
+        - label: A policy addition includes at least one case where the policy loses.
+        - label: Evidence levels (verified, direct_learned, derived, structural, fallback) remain accurate.
+        - label: Documentation claims stay within the measured result and do not imply an EQ benchmark that was not run.
+        - label: Not applicable.
+
+  - type: textarea
+    id: contribution
+    attributes:
+      label: Willing to implement it
+      description: Say what part you can take on. Cases, counter-cases, and harness improvements are all useful.
+    validations:
+      required: false
