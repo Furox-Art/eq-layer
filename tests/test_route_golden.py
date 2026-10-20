@@ -42,7 +42,7 @@ from eq_layer.affect import HeuristicAffect
 from eq_layer.dialogue_reference import infer_dialogue_reference
 from eq_layer.intent import HeuristicIntent, IntentState
 from eq_layer.interaction import infer_interaction_quality, infer_repair_state
-from eq_layer.policies import POLICIES, AffectState, Register, Selector
+from eq_layer.policies import AffectState, Register, Selector
 from eq_layer.steer import Steer
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -153,7 +153,7 @@ def test_the_table_pins_at_least_fifteen_decision_objects() -> None:
 def test_the_table_covers_every_reachable_policy_family() -> None:
     pinned = {case["expected"]["policy"]["name"] for case in ROUTE_GOLDEN}
     pinned |= {case["policy"] for case in ANNOTATED_GOLDEN}
-    assert pinned == {policy.name for policy in POLICIES}
+    assert pinned == {policy.name for policy in policies.POLICIES}
 
 
 def test_the_table_covers_every_register_family() -> None:
@@ -358,7 +358,7 @@ def test_selection_does_not_depend_on_policy_declaration_order(
 
     rng = random.Random(20261014)
     for _ in range(10):
-        shuffled = list(POLICIES)
+        shuffled = list(policies.POLICIES)
         rng.shuffle(shuffled)
         monkeypatch.setattr(policies, "POLICIES", tuple(shuffled))
         shuffled_selector = Selector()

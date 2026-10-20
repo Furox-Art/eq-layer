@@ -8,7 +8,8 @@ from eq_layer.dialogue_reference import DialogueReferenceState
 from eq_layer.intent import HeuristicIntent
 from eq_layer.intent_belief import IntentBelief, expected_loss
 from eq_layer.interaction import InteractionQualityState, RepairState
-from eq_layer.policies import POLICIES, AffectState, Selector
+from eq_layer import policies
+from eq_layer.policies import AffectState, Selector
 
 
 def intent(text="Bunu yap"):
@@ -16,7 +17,7 @@ def intent(text="Bunu yap"):
 
 
 def policy():
-    return next(p for p in POLICIES if p.name == "mirror_specific")
+    return next(p for p in policies.POLICIES if p.name == "mirror_specific")
 
 
 def test_repair_moves_distinguish_repeated_and_corrected_tasks():

@@ -119,6 +119,7 @@ def main() -> int:
         )
         FAILURES.append("unknown profile should raise")
     except ValueError:
+        # Expected: an unknown length profile must be refused.
         pass
 
     check(
@@ -245,6 +246,7 @@ def main() -> int:
         )
         FAILURES.append("unknown profile should be rejected by the manifest")
     except ValueError:
+        # Expected: the manifest rejects an unknown length profile.
         pass
 
     shutil.rmtree(stub_dir, ignore_errors=True)

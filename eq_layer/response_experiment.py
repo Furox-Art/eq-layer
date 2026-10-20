@@ -47,19 +47,23 @@ def _force_kill(process: subprocess.Popen) -> None:
     try:
         process.terminate()
     except OSError:
+        # The child may already have been reaped by the OS.
         pass
     try:
         process.wait(timeout=5)
         return
     except subprocess.TimeoutExpired:
+        # Ignored the graceful signal; escalate to kill below.
         pass
     try:
         process.kill()
     except OSError:
+        # The child exited between the timeout and the kill.
         pass
     try:
         process.wait(timeout=5)
     except subprocess.TimeoutExpired:
+        # Last-resort wait; nothing further can be done without a block.
         pass
 
 

@@ -2,13 +2,13 @@ import json
 
 import pytest
 
-from eq_layer import actions, affect, cli
+from eq_layer import actions, affect, cli, policies
 from eq_layer import dialogue_reference as ref
 from eq_layer import intent_belief as belief
 from eq_layer import interaction as interaction
 from eq_layer import response_experiment as exp
 from eq_layer.interaction import InteractionQualityState, RepairState
-from eq_layer.policies import POLICIES, AffectState
+from eq_layer.policies import AffectState
 
 
 def msg(role, text):
@@ -27,10 +27,10 @@ def test_reference_without_prior_user_goal_does_not_invent_one():
 
 
 def test_policy_repair_preserves_prior_clarification_and_adjusts_neutral_social_move():
-    ask = next(p for p in POLICIES if p.name == "ask_one_question")
+    ask = next(p for p in policies.POLICIES if p.name == "ask_one_question")
     repair = RepairState(active=True)
     assert actions._repair_move(ask, repair) == "clarify_one"
-    neutral = next(p for p in POLICIES if p.name == "execute_request")
+    neutral = next(p for p in policies.POLICIES if p.name == "execute_request")
     quality = InteractionQualityState(
         current=0.4,
         delta=-0.3,

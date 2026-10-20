@@ -16,7 +16,8 @@ class AffectAdapter(Protocol):
         messages: list[dict],
         turn_index: int = 0,
         annotated: dict | None = None,
-    ) -> AffectState: ...
+    ) -> AffectState:
+        pass  # pragma: no cover - Protocol stub
 
 
 # --- detectors -----------------------------------------------------------

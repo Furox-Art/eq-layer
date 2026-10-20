@@ -13,7 +13,6 @@ from __future__ import annotations
 import json
 import os
 import sys
-import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -92,6 +91,7 @@ def main() -> int:
         score_profiles([{"id": "a", "eq": "", "length_matched_p": "w"}])
         FAILURES.append("empty EQ arm should raise")
     except ValueError:
+        # Expected: an empty EQ arm must be refused.
         pass
 
     # No profile arm is an error too.
@@ -99,6 +99,7 @@ def main() -> int:
         choose(eq_stats, {})
         FAILURES.append("no profiles should raise")
     except ValueError:
+        # Expected: calling choose without profiles must be refused.
         pass
 
     print(json.dumps({"failures": FAILURES, "ok": not FAILURES}, indent=2))

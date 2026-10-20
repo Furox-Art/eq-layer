@@ -27,7 +27,8 @@ class IntentState:
 class IntentAdapter(Protocol):
     name: str
 
-    def infer(self, messages: list[dict]) -> IntentState: ...
+    def infer(self, messages: list[dict]) -> IntentState:
+        pass  # pragma: no cover - Protocol stub
 
 
 ACTION_MARKERS = (
