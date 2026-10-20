@@ -30,7 +30,8 @@ class StanceResolver(Protocol):
         self,
         messages: list[dict],
         annotated: dict | None = None,
-    ) -> StanceDecision: ...
+    ) -> StanceDecision:
+        pass  # pragma: no cover - Protocol stub
 
 
 @dataclass

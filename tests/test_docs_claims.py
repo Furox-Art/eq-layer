@@ -15,7 +15,8 @@ from eq_layer.affect import HeuristicAffect
 from eq_layer.cli import build_parser
 from eq_layer.intent import CONSTRAINT_MARKERS, HeuristicIntent
 from eq_layer.intent_belief import INTENT_LABELS
-from eq_layer.policies import POLICIES, Register
+from eq_layer import policies
+from eq_layer.policies import Register
 from eq_layer.tracker import AnnotationStanceResolver
 from eq_layer.trained_intent import TrainedIntent
 
@@ -233,7 +234,7 @@ def test_escalating_past_n_excludes_the_current_turn() -> None:
     """One polite turn after three hostile ones must not reset the register."""
     assert _line_containing(README, "escalating_past_n` excludes the current turn")
     predicate = next(
-        policy for policy in POLICIES if policy.name == "hold_sustained_escalation"
+        policy for policy in policies.POLICIES if policy.name == "hold_sustained_escalation"
     )
     messages = [
         {"role": "user", "content": "Neden bu?"},

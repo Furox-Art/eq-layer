@@ -7,7 +7,9 @@ from .intent import HeuristicIntent, IntentAdapter, IntentState
 from .intent_belief import IntentBelief, IntentRiskDecision, decide_intent_action, expected_loss
 from .interaction import InteractionQualityState, RepairState, infer_interaction_quality, infer_repair_state
 from .model_state import ModelStateError
-from .policies import POLICIES, REGISTRY, SUBTEXTS, AffectState, Policy, Register, Selector
+from . import policies as _policies
+from .policies import REGISTRY, SUBTEXTS, AffectState, Policy, Register, Selector
+
 from .preferences import SessionPreferences, infer_session_preferences
 from .response_experiment import (
     CommandModel,
@@ -21,6 +23,10 @@ from .trained_affect import DimensionalAffect, TrainedAffect
 from .trained_intent import TrainedIntent
 from .trained_subtext import DialogueSignals, SubtextDecision, TrainedSubtext
 from .tracker import AnnotationStanceResolver, ConversationTracker, StanceDecision, TrackingResult
+
+# Snapshot re-export: code that must observe runtime overrides reads
+# eq_layer.policies.POLICIES instead.
+POLICIES = _policies.POLICIES
 
 __all__ = [
     "__version__",

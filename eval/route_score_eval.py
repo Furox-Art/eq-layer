@@ -143,6 +143,7 @@ def main() -> int:
         collect([ballot_row("bad", "empathetic", "clarify_goal", "set_boundary")])
         FAILURES.append("out-of-set adjudicated move should raise")
     except ValueError:
+        # Expected: an out-of-set adjudicated move must be refused.
         pass
 
     # Pairwise scorer must find circular ids from the stratum field.

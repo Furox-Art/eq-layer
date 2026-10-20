@@ -23,7 +23,6 @@ import json
 import os
 import shlex
 import subprocess
-import sys
 
 PAYLOAD = {
     "model_id": "Qwen/Qwen2.5-0.5B-Instruct",

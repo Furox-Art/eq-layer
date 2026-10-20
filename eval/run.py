@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from eq_layer.affect import HeuristicAffect, load_cases  # noqa: E402
 from eq_layer.trained_intent import TrainedIntent  # noqa: E402
-from eq_layer.policies import POLICIES, Selector  # noqa: E402
+import eq_layer.policies as policies  # noqa: E402
 from eq_layer.steer import score_case  # noqa: E402
 
 CASES = os.path.join(os.path.dirname(__file__), "cases.jsonl")
@@ -23,7 +23,7 @@ def main() -> int:
     cases = load_cases(CASES)
     adapter = HeuristicAffect()
     intent_adapter = TrainedIntent.from_bundled()
-    selector = Selector()
+    selector = policies.Selector()
 
     scores = []
     selected_names = []
@@ -59,7 +59,7 @@ def main() -> int:
             f"{selection.policy.name:<26} {'y' if ok else 'n'}"
         )
 
-    unselected = [p.name for p in POLICIES if p.name not in selected_names]
+    unselected = [p.name for p in policies.POLICIES if p.name not in selected_names]
 
     print()
     print(f"policy selection: {len(cases) - len(mismatches)}/{len(cases)}")

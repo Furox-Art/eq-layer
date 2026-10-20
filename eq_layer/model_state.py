@@ -21,8 +21,6 @@ from typing import Any
 # estimator, so its concrete type is deliberately not pinned here.
 FITTED = object()
 
-_FLOAT_TYPES = (int, float)
-
 
 class ModelStateError(ValueError):
     """A persisted model artifact failed schema validation at load time."""

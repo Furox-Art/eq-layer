@@ -5,8 +5,8 @@ import pytest
 from eq_layer.dialogue_reference import DialogueReferenceState
 from eq_layer.intent import HeuristicIntent
 from eq_layer.intent_belief import IntentBelief, decide_intent_action
+from eq_layer import policies
 from eq_layer.interaction import InteractionQualityState, RepairState
-from eq_layer.policies import POLICIES
 from eq_layer.steer import Steer
 
 
@@ -15,7 +15,7 @@ def _intent():
 
 
 def test_steering_without_optional_context_keeps_control_action():
-    steer = Steer.build(POLICIES[0])
+    steer = Steer.build(policies.POLICIES[0])
     assert "Control action" in steer.system_instruction()
     assert steer.apply_to_prompt("Text").endswith("User: Text")
 
@@ -23,7 +23,7 @@ def test_steering_without_optional_context_keeps_control_action():
 def test_steering_includes_risk_model_when_present():
     belief = IntentBelief.from_mapping({"question": 0.7, "statement": 0.3})
     intent = replace(_intent(), belief=belief, risk_decision=decide_intent_action(belief))
-    prompt = Steer.build(POLICIES[0], intent).system_instruction()
+    prompt = Steer.build(policies.POLICIES[0], intent).system_instruction()
     assert "Intent belief:" in prompt
     assert "Intent routing decision:" in prompt
 
@@ -54,7 +54,7 @@ def test_steering_includes_risk_model_when_present():
     ],
 )
 def test_reference_instructions_preserve_resolution_status(reference, fragment):
-    result = Steer.build(POLICIES[0], _intent(), reference=reference)
+    result = Steer.build(policies.POLICIES[0], _intent(), reference=reference)
     assert fragment in result.system_instruction()
 
 
@@ -70,7 +70,7 @@ def test_reference_instructions_preserve_resolution_status(reference, fragment):
     ],
 )
 def test_repair_instructions_preserve_replacement(repair, fragment):
-    result = Steer.build(POLICIES[0], _intent(), repair=repair)
+    result = Steer.build(policies.POLICIES[0], _intent(), repair=repair)
     assert fragment in result.system_instruction()
 
 
@@ -82,5 +82,5 @@ def test_interaction_health_prints_independently():
         unresolved_repair_count=1,
         clarification_count=3,
     )
-    result = Steer.build(POLICIES[0], _intent(), interaction_quality=quality)
+    result = Steer.build(policies.POLICIES[0], _intent(), interaction_quality=quality)
     assert "Interaction quality:" in result.system_instruction()
