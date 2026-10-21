@@ -52,7 +52,7 @@ body:
     attributes:
       label: Version and install source
       description: Which version are you running, and was it installed from PyPI, npm, or a local checkout?
-      placeholder: "0.2.4, local checkout"
+      placeholder: "0.2.5, local checkout"
     validations:
       required: true
 

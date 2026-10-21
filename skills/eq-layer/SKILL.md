@@ -2,6 +2,8 @@
 name: eq-layer
 description: Route an assistant response through EQ-Layer's inspectable intent, affect, repair, interaction-quality, dialogue-reference, and factored-action controls before drafting. Use when a response should be emotionally calibrated, direct, repair-aware, uncertainty-aware, or preserve the user's task while adapting social delivery.
 license: MIT
+metadata:
+  version: "0.2.5"
 ---
 
 # EQ-Layer Agent Skill

@@ -1,5 +1,11 @@
 name: Publish npm
 
+# Publishing starts only from a published release or an explicit
+# workflow_dispatch. The previous `.npm-release-request` push trigger was
+# removed: any push to main that touched that file could request a publish, and
+# the job checked out `github.ref` (main) instead of the release tag. The
+# checkout below always resolves a tag, so the bytes published are the bytes
+# that were tagged.
 on:
   release:
     types: [published]
@@ -14,10 +20,6 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    branches: [main]
-    paths:
-      - ".npm-release-request"
 
 permissions:
   contents: read
@@ -29,7 +31,9 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.release.tag_name || github.ref }}
+          # Always a tag: the release tag for `release`, or `v<version>` for an
+          # explicit dispatch. Never the dispatching branch.
+          ref: ${{ github.event.release.tag_name || format('v{0}', inputs.version) }}
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: "24"
@@ -47,8 +51,8 @@ jobs:
           elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             requested="${DISPATCH_VERSION#v}"
           else
-            requested="$(tr -d '[:space:]' < .npm-release-request)"
-            requested="${requested#v}"
+            echo "::error::Unsupported event ${GITHUB_EVENT_NAME}; publish runs from a published release or workflow_dispatch only."
+            exit 1
           fi
           actual="$(node -p "require('./package.json').version")"
           echo "release=${requested} package=${actual}"

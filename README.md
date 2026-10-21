@@ -77,10 +77,17 @@ paths and source documentation.
 
 ## Quick start
 
-Install the learned intent tracker:
+Install the Python runtime:
 
 ```bash
 pip install "eq-layer[ml]"
+```
+
+Install the npm skill installer and CLI bridge (Node >= 22.14):
+
+```bash
+npm install -g eq-layer
+npx eq-layer --help
 ```
 
 ```python
@@ -110,6 +117,18 @@ prompt = Steer.build(
     repair=tracked.repair,
     interaction_quality=tracked.interaction_quality,
 ).apply_to_prompt(messages[-1]["content"])
+```
+
+The two `.joblib` files under `artifacts/` are **not shipped** in the
+repository, the PyPI wheel, or the npm tarball. Produce them with the training
+commands below (`tools/train_emobank_affect.py` and
+`tools/train_xdailydialog_subtext.py`) before running this block. Without those
+artifacts, use the zero-dependency route, which reports
+`"runtime_mode": "lightweight-local"` and needs no `.joblib` file:
+
+```bash
+printf '%s' '[{"role":"user","content":"devam et"}]' \
+  | python -m eq_layer.cli route --intent-mode heuristic --pretty
 ```
 
 Run the seeded cases. Exits non-zero on any mismatch or any policy that no
@@ -527,16 +546,20 @@ bridge). Each side keeps its version in exactly one canonical location, and the
 release workflows verify the GitHub release tag against those fields before
 uploading.
 
-npm publishing picks its credential mode at run time, based on repository
-settings only:
+`.github/workflows/create-release.yml` is the release entry point: a push to
+`main` that changes `.release-request` creates the GitHub release when missing
+and explicitly dispatches both publishers (`release.yml` for PyPI and
+`publish-npm.yml` for npm). A release tag on its own does not publish npm;
+GitHub suppresses the `release` event for releases created with `GITHUB_TOKEN`,
+so the explicit dispatch is required.
 
-- `NPM_TOKEN` configured: token mode, `npm publish --access public
-  --no-provenance`;
-- no `NPM_TOKEN`: trusted publishing over GitHub OIDC, `npm publish
-  --access public --provenance`.
-
-Provenance is an OIDC-only attestation, so it is only requested when no token is
-configured. See `docs/PUBLISHING.md` for the full flow.
+npm publishing uses trusted publishing over GitHub OIDC by default and requests
+a provenance attestation (`npm publish --access public --provenance`). The
+presence of an `NPM_TOKEN` secret does **not** change that: token mode runs only
+when a maintainer explicitly dispatches `publish-npm.yml` with
+`use_token_fallback=true`. That fallback publishes with
+`npm publish --access public --no-provenance`, because provenance is an
+OIDC-only attestation. See `docs/PUBLISHING.md` for the full flow.
 
 ## Contributing
 

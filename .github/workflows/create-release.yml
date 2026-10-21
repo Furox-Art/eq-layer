@@ -45,3 +45,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
         run: gh workflow run release.yml -f "version=$VERSION"
+      # A GitHub Release created with GITHUB_TOKEN does not emit a `release`
+      # event (GitHub suppresses it to prevent recursive runs), so
+      # publish-npm.yml's `release: published` trigger never fires for these
+      # releases. Dispatch it explicitly with the same version, exactly like
+      # the PyPI publisher above.
+      - name: Dispatch npm publisher explicitly
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: gh workflow run publish-npm.yml -f "version=$VERSION"

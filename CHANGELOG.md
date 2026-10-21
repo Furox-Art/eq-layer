@@ -5,6 +5,45 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2026-10-21
+
+### Security
+
+- CLI transcripts and case files share one strict JSON validator; ambiguous or
+  non-string transcripts are rejected instead of being coerced (`a59f5ed`,
+  `5e9ad6d`).
+- Human evaluation ballots must be unique and unambiguous, and fabricated
+  blinded responses or empty rater cohorts are refused (`6a198c2`, `8e66cbe`).
+- Open CodeQL code-scanning alerts are resolved without behaviour changes
+  (`d039add`).
+
+### Fixed
+
+- `tools/crosscheck.js` runs under ESM, and the SECURITY/CITATION metadata is
+  repaired (`ebd3ca4`).
+
+### CI
+
+- Python branch coverage is enforced at 100% with zero skipped tests
+  (`4ec663a`); pip dependencies are cached in the EQ validation and coverage
+  jobs (`2517ece`).
+- Actions are pinned to commit SHAs and CodeQL analysis runs in CI
+  (`33f9a06`, `d039add`).
+
+### Docs
+
+- npm releases default to trusted publishing over OIDC and request provenance.
+  Token mode runs only when a maintainer dispatches `publish-npm.yml` with
+  `use_token_fallback=true`; an `NPM_TOKEN` secret does not select it
+  (`5315bb3`).
+- `create-release.yml` explicitly dispatches both publishers; a release tag
+  alone does not publish npm.
+- README documents `npm install -g eq-layer` / `npx eq-layer --help`, states
+  that `artifacts/*.joblib` are not shipped and must be trained locally (or the
+  zero-dependency route used), and publishing docs are corrected.
+- Version references are updated to 0.2.5 in README, SECURITY, CITATION,
+  SKILL.md and the plugin manifests.
+
 ## [0.2.2] - 2026-10-12
 ### Housekeeping — audit hardening
 
