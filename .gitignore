@@ -7,3 +7,17 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# Python test/build outputs
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+
+# Retired release trigger files (publishing is dispatched explicitly; see
+# .github/workflows/create-release.yml and .github/workflows/publish-npm.yml)
+.npm-release-request
+.release-trigger

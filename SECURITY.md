@@ -25,8 +25,8 @@ model artifacts, and those are exactly the part you must trust.
 
 | Version | Supported | Notes |
 |---|---|---|
-| `0.2.x` on npm | Yes | `0.2.2` is the current release. |
-| `0.2.x` on PyPI | Yes | `0.2.4` is the current release, published with a PEP 740 attestation. |
+| `0.2.x` on npm | Yes | `0.2.5` is the current release. |
+| `0.2.x` on PyPI | Yes | `0.2.5` is the current release, published with a PEP 740 attestation. |
 | `<= 0.1.x` | No | No fixes. Reproduce on `main` and open an issue if it still reproduces. |
 
 Only the current release is exercised by CI (`.github/workflows/eval.yml` and the
@@ -54,10 +54,12 @@ less than it looks:
   Note the URL shape: attestations are served **per file**. A `404` on this URL
   means "no such endpoint", not "no attestation".
 
-- **npm — published with `--provenance`.** `.github/workflows/publish-npm.yml`
-  runs in GitHub Actions with `id-token: write`, which lets the npm CLI mint a
-  Sigstore identity from the workflow rather than from the registry. The
-  published artifacts carry a provenance attestation; verify it with:
+- **npm — published with `--provenance` on the default OIDC path.**
+  `.github/workflows/publish-npm.yml` runs in GitHub Actions with
+  `id-token: write`, which lets the npm CLI mint a Sigstore identity from the
+  workflow rather than from the registry. Releases published through the
+  explicit `use_token_fallback=true` dispatch carry no attestation.
+  Verify a default release with:
 
   ```bash
   npm audit signatures eq-layer
