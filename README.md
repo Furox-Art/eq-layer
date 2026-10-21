@@ -551,7 +551,10 @@ uploading.
 and explicitly dispatches both publishers (`release.yml` for PyPI and
 `publish-npm.yml` for npm). A release tag on its own does not publish npm;
 GitHub suppresses the `release` event for releases created with `GITHUB_TOKEN`,
-so the explicit dispatch is required.
+so the explicit dispatch is required. The npm job waits until the exact version
+is live on PyPI before publishing, so a failed PyPI release cannot leave npm
+ahead. Both publishers no-op when their registry already has the version, and
+prerelease GitHub releases are skipped by both workflows.
 
 npm publishing uses trusted publishing over GitHub OIDC by default and requests
 a provenance attestation (`npm publish --access public --provenance`). The
