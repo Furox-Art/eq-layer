@@ -26,7 +26,16 @@ jobs:
           PY
           )"
           test "$requested" = "$actual"
+          prerelease="$(python - "$actual" <<'PY'
+          import re
+          import sys
+
+          version = sys.argv[1]
+          print("true" if re.search(r"(a|b|rc|dev|alpha|beta|pre|preview)", version, re.IGNORECASE) else "false")
+          PY
+          )"
           echo "version=$actual" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
       - name: Create GitHub Release if missing
         env:
           GH_TOKEN: ${{ github.token }}
@@ -35,12 +44,19 @@ jobs:
           if gh release view "v$VERSION" >/dev/null 2>&1; then
             echo "Release v$VERSION already exists."
           else
-            gh release create "v$VERSION" \
-              --target "${GITHUB_SHA}" \
-              --title "v$VERSION" \
-              --generate-notes
+            args=(--target "${GITHUB_SHA}" --title "v$VERSION" --generate-notes)
+            if [ "${{ steps.version.outputs.prerelease }}" = "true" ]; then
+              # Marking the release prevents the tag-triggered publishers from
+              # treating a prerelease as a production release.
+              args+=(--prerelease)
+            fi
+            gh release create "v$VERSION" "${args[@]}"
           fi
+      # Prereleases stay GitHub-only: the publishers intentionally skip
+      # `release: published` for prereleases, so dispatching them here would
+      # bypass that guard and put e.g. 0.3.0rc1 on the production indexes.
       - name: Dispatch PyPI publisher explicitly
+        if: steps.version.outputs.prerelease != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
@@ -51,6 +67,7 @@ jobs:
       # releases. Dispatch it explicitly with the same version, exactly like
       # the PyPI publisher above.
       - name: Dispatch npm publisher explicitly
+        if: steps.version.outputs.prerelease != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
