@@ -14,8 +14,71 @@ permissions:
   contents: read
   id-token: write
 
+# A release must never be cancelled mid-flight: cancelling between the sdist
+# upload and the wheel upload leaves a half-published release on PyPI.
+concurrency:
+  group: release-pypi-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    # GitHub fires `release: published` for prereleases too. Publishing a
+    # prerelease tag would put e.g. 0.4.0rc1 on the production index as a
+    # normal release; prereleases stay GitHub-only. Manual dispatches remain
+    # available for explicit recovery of an already-tagged version.
+    if: github.event_name != 'release' || github.event.release.prerelease == false
+    outputs:
+      published: ${{ steps.check.outputs.published }}
+    steps:
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Check whether this version is already on PyPI
+        id: check
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          DISPATCH_VERSION: ${{ inputs.version }}
+          PYPI_PROJECT: eq-layer
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "release" ]; then
+            version="${RELEASE_TAG#v}"
+          else
+            version="${DISPATCH_VERSION#v}"
+          fi
+          export VERSION="${version}"
+          python - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          project = os.environ["PYPI_PROJECT"]
+          version = os.environ["VERSION"]
+          url = f"https://pypi.org/pypi/{project}/{version}/json"
+          try:
+              with urllib.request.urlopen(url, timeout=30) as response:
+                  data = json.load(response)
+          except urllib.error.HTTPError as error:
+              if error.code != 404:
+                  raise
+              published = False
+          else:
+              published = data["info"]["version"] == version
+              if not published:
+                  raise SystemExit(
+                      f"PyPI {url} reports version {data['info']['version']!r}, expected {version!r}"
+                  )
+          print(f"{project} {version} already published on PyPI: {published}")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"published={'true' if published else 'false'}\n")
+          PY
+
   build-python:
+    needs: preflight
+    # A re-trigger of an already-published version is a no-op, not a failure.
+    if: needs.preflight.outputs.published != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -77,4 +140,8 @@ jobs:
           name: python-dist
           path: dist
       - name: Publish to PyPI using trusted publishing
+        # skip-existing keeps a concurrent/re-run publish from failing on files
+        # the preflight saw as absent but that landed between check and upload.
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        with:
+          skip-existing: true

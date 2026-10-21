@@ -42,10 +42,14 @@ To publish a new version:
    creates the GitHub Release tagged `vX.Y.Z` when it is missing, and explicitly
    dispatches both publishers (`release.yml` for PyPI and `publish-npm.yml` for
    npm);
-4. `.github/workflows/release.yml` verifies that the release tag and package
-   version match;
-5. the workflow builds the wheel/sdist, runs `twine check`, and publishes to
-   PyPI through GitHub OIDC / PyPI Trusted Publishing.
+4. `.github/workflows/release.yml` checks whether the exact version is already
+   live on PyPI and no-ops if it is; otherwise it verifies that the release tag
+   and package version match, builds the wheel/sdist, runs `twine check`, and
+   publishes to PyPI through GitHub OIDC / PyPI Trusted Publishing;
+5. `.github/workflows/publish-npm.yml` blocks until the exact version is live
+   on PyPI (checking for up to 15 minutes) and fails if it never appears, then
+   skips validation and upload when that version is already on npm. A failed
+   PyPI release therefore also fails npm; npm cannot get ahead of PyPI.
 
 The explicit npm dispatch is required because a GitHub Release created with
 `GITHUB_TOKEN` does not emit a `release` event. A release tag alone does not
@@ -72,14 +76,33 @@ The same workflow has a manual dispatch input named `version`. Use it only for
 recovery/retry. The supplied version must still exactly match
 `pyproject.toml`.
 
+## Prereleases
+
+GitHub fires `release: published` for prereleases too. Both publisher workflows
+skip release events where `github.event.release.prerelease` is true, so a
+prerelease GitHub release never reaches PyPI or npm. `workflow_dispatch`
+remains available for explicit recovery of an already-tagged stable version;
+the tag/version checks still apply to those runs.
+
+## Re-running a release
+
+Both publishers are idempotent. If `vX.Y.Z` is already on PyPI, `release.yml`
+stops after its preflight check. If the version is already on npm,
+`publish-npm.yml` confirms the PyPI release is live and then skips validation
+and upload. Re-triggering `.release-request` for a completed version is
+therefore safe and does not fail with "already exists".
+
 ## npm automatic release flow
 
 The npm package uses the same semantic version as PyPI.
 `.github/workflows/create-release.yml` explicitly dispatches
 `publish-npm.yml` with the release version; a release tag on its own does not
 publish npm. `publish-npm.yml` verifies that the requested version (release tag
-or manual dispatch input) exactly matches `package.json` before uploading. It
-then runs `npm test` and `npm pack --dry-run --json`.
+or manual dispatch input) exactly matches `package.json` before uploading, and
+waits until that version is live on PyPI so npm cannot publish before the
+Python artifact. It then runs `npm test` and `npm pack --dry-run --json`. When
+the version is already on the npm registry, the workflow confirms PyPI and then
+no-ops instead of failing on "version already exists".
 
 Publishing has **two credential modes**, and OIDC is the default:
 
