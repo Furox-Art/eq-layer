@@ -44,7 +44,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
-        run: gh workflow run release.yml -f "version=$VERSION"
+        run: gh workflow run release.yml --ref "v$VERSION" -f "version=$VERSION"
       # A GitHub Release created with GITHUB_TOKEN does not emit a `release`
       # event (GitHub suppresses it to prevent recursive runs), so
       # publish-npm.yml's `release: published` trigger never fires for these
@@ -54,4 +54,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
-        run: gh workflow run publish-npm.yml -f "version=$VERSION"
+        run: gh workflow run publish-npm.yml --ref "v$VERSION" -f "version=$VERSION"
