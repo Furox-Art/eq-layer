@@ -423,6 +423,11 @@ The auditor currently checks only structurally observable control violations:
 - repeated prior answer while a repair is active;
 - large low-verbosity overruns.
 
+Phrase matching folds punctuation, fullwidth and zero-width characters,
+combining marks and Turkish dotted/dotless case before checking word boundaries,
+so a spelling-level variant does not hide a privacy promise or a stance
+admission from the audit.
+
 It does **not** decide whether factual claims are true, whether the user's
 position is correct, or whether advice is substantively good. Hard audit
 failures currently request regeneration in metadata only; automatic

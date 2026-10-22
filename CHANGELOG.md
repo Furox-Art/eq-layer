@@ -5,6 +5,34 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- The response auditor folds punctuation, fullwidth and zero-width characters,
+  combining marks and Turkish dotted/dotless case before matching privacy
+  promises and stance admissions, and it now requires whole-word matches.
+  Evasions such as `KİMSEYE-SÖYLEMEM`, `kimseye<zero-width>söylemem` or
+  `You’re right` no longer pass the audit, while `söylememek` no longer matches
+  `söylemem`.
+- `SECURITY.md` no longer claims the package makes no network calls. It
+  documents the three dataset download helpers, which hosts they contact and
+  which of them verify an archive digest.
+
+### Packaging
+
+- The `[ml]` and `[dev]` extras declare `joblib` explicitly instead of relying
+  on it arriving through `scikit-learn`.
+- The sdist now ships `tests/`, `eval/`, `tools/`, `docs/`, the security policy,
+  changelog and citation metadata, so the packaged source matches the claims
+  the project makes about its own evaluation.
+
+### CI
+
+- Weekly Dependabot updates for GitHub Actions and pip, OpenSSF Scorecard
+  publishing, and dependency review that fails pull requests introducing a
+  high-severity advisory.
+
 ## [0.2.5] - 2026-10-21
 
 ### Security
