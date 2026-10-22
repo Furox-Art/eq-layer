@@ -49,6 +49,20 @@ jobs:
           # Always a tag: the release tag for `release`, or `v<version>` for an
           # explicit dispatch. Never the dispatching branch.
           ref: ${{ github.event.release.tag_name || format('v{0}', inputs.version) }}
+          # Full history is needed to prove the tag is contained in main.
+          fetch-depth: 0
+      - name: Require the release commit to be on main
+        # A tag on an unmerged branch must not publish npm content, even when
+        # the same version is already live on PyPI. release.yml enforces the
+        # same ancestry rule before its PyPI upload.
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor HEAD origin/main || {
+            echo "::error::Release commit $(git rev-parse HEAD) is not on main."
+            exit 1
+          }
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: "24"
