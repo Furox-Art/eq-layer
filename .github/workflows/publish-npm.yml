@@ -23,7 +23,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 # Never cancel a publish mid-flight: npm versions are immutable, and two
 # simultaneous runs for the same tag should serialize so the second one can
@@ -39,6 +38,11 @@ jobs:
     # available for explicit recovery of an already-tagged version.
     if: github.event_name != 'release' || github.event.release.prerelease == false
     runs-on: ubuntu-latest
+    # OIDC is only needed for the publish step's trusted-publishing exchange;
+    # keep the rest of the job on the read-only default.
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

@@ -25,4 +25,13 @@ jobs:
           python -m pip install -e ".[dev]" "pytest-cov>=5,<8"
       - name: Require zero skipped tests and full statement and branch coverage
         run: |
-          python -m pytest -q -rs tests/ --cov=eq_layer --cov-branch --cov-report=term-missing --cov-fail-under=100
+          python -m pytest -q -rs tests/ --cov=eq_layer --cov-branch \
+            --cov-report=term-missing --cov-fail-under=100 --junitxml=junit.xml
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          skipped = ET.parse("junit.xml").getroot().findall(".//skipped")
+          if skipped:
+              raise SystemExit(f"FAIL: {len(skipped)} test(s) were skipped; the suite must run all of them")
+          print("PASS: no test was skipped")
+          PY
