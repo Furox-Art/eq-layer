@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass
 from difflib import SequenceMatcher
 
 from .textnorm import normalise_light as _normalise
-
+from .textnorm import normalise_match
 
 ABSOLUTE_PRIVACY_PROMISES = (
     "kimseye söylemem",
@@ -29,6 +29,15 @@ STANCE_ADMISSIONS = (
     "i was wrong",
     "my mistake",
 )
+
+_PRIVACY_MATCH = tuple(normalise_match(phrase) for phrase in ABSOLUTE_PRIVACY_PROMISES)
+_STANCE_MATCH = tuple(normalise_match(phrase) for phrase in STANCE_ADMISSIONS)
+_SENTENCE_BREAK = re.compile(r"(?<=[.!?。！？])\s+|\n+")
+
+
+def _has_phrase(text: str, phrase: str) -> bool:
+    """Match whole words on already folded text, never a substring of a word."""
+    return f" {phrase} " in f" {text} "
 
 
 @dataclass(frozen=True)
@@ -80,8 +89,8 @@ class ResponseAudit:
 
 
 def _sentence_starts(text: str) -> tuple[str, ...]:
-    parts = re.split(r"(?<=[.!?])\s+|\n+", _normalise(text))
-    return tuple(part.strip(" -—:;,.!?") for part in parts if part.strip())
+    parts = (normalise_match(part) for part in _SENTENCE_BREAK.split(text))
+    return tuple(part for part in parts if part)
 
 
 def _max_repeat_similarity(
@@ -112,7 +121,7 @@ class ResponseAuditor:
     def audit(self, response: str, context: AuditContext) -> ResponseAudit:
         issues: list[AuditIssue] = []
         stripped = response.strip()
-        low = _normalise(stripped)
+        match_text = normalise_match(stripped)
         question_count = stripped.count("?")
         word_count = len(stripped.split())
         repeat_similarity = _max_repeat_similarity(
@@ -155,8 +164,10 @@ class ResponseAuditor:
                 )
             )
 
-        for phrase in ABSOLUTE_PRIVACY_PROMISES:
-            if phrase in low:
+        for phrase, match_phrase in zip(
+            ABSOLUTE_PRIVACY_PROMISES, _PRIVACY_MATCH, strict=True
+        ):
+            if _has_phrase(match_text, match_phrase):
                 issues.append(
                     AuditIssue(
                         code="absolute_privacy_promise",
@@ -172,11 +183,12 @@ class ResponseAuditor:
             stance_hit = next(
                 (
                     phrase
-                    for phrase in STANCE_ADMISSIONS
+                    for phrase, match_phrase in zip(
+                        STANCE_ADMISSIONS, _STANCE_MATCH, strict=True
+                    )
                     if any(
-                        sentence == phrase
-                        or sentence.startswith(phrase + " ")
-                        or sentence.startswith(phrase + ",")
+                        sentence == match_phrase
+                        or sentence.startswith(match_phrase + " ")
                         for sentence in starts
                     )
                 ),
@@ -282,7 +294,9 @@ def audit_from_generation_metadata(
 REGENERATION_GUIDANCE = {
     "empty_response": "Return a non-empty response that follows the control action.",
     "question_budget_exceeded": "Do not exceed the allowed number of questions.",
-    "missing_required_clarification": "Ask exactly one targeted clarification question before guessing.",
+    "missing_required_clarification": (
+        "Ask exactly one targeted clarification question before guessing."
+    ),
     "absolute_privacy_promise": "Do not promise absolute privacy or confidentiality.",
     "unsupported_stance_admission": (
         "Do not claim that the user is right or that the assistant was wrong "

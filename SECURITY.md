@@ -12,7 +12,7 @@ Understanding the attack surface means not conflating these:
 
 | Component | Runtime dependency | Security-relevant because |
 |---|---|---|
-| `eq_layer` library | None (optional `scikit-learn` for trained models) | Pure computation. It reads messages and emits decisions and text; it makes no network calls and runs no user-supplied code. |
+| `eq_layer` library | None required (optional `scikit-learn` and `joblib` for trained models) | Pure computation for decisions and text. The core path makes no network calls and runs no user-supplied code; the three dataset download helpers listed under [Network access](#network-access) are the only outbound code and run only when called explicitly. |
 | Trained artifacts (`.joblib`) | `joblib` | `joblib` is pickle-backed. `TrainedAffect.load` / `TrainedIntent.load` / `TrainedSubtext.load` on an **untrusted** file is code execution, not data loading. |
 | Steering + auditor | Host SDK | The layer injects `system_instruction` / prompt rewrites into your generation call. It cannot constrain what the host then does with the model output. |
 | npm package (`eq-layer`) | Node >= 22.14 | `install` copies the Agent Skill into discovery roots (`~/.claude/skills/…`, `~/.codex/skills/…`, …) and `--force` removes an existing target directory first. `route` forwards arguments to `python -m eq_layer.cli`. |
@@ -20,6 +20,22 @@ Understanding the attack surface means not conflating these:
 
 The honest summary: the library does not execute anything you hand it except
 model artifacts, and those are exactly the part you must trust.
+
+## Network access
+
+The request path — routing, policy selection, steering and auditing — opens no
+sockets. Three optional corpus adapters make outbound HTTP requests, and only
+when an `eval/` or `tools/` entry point calls them explicitly:
+
+| Module | Endpoint | Integrity check |
+|---|---|---|
+| `eq_layer/coarse_discourse.py` | `zissou.infosci.cornell.edu` | None. The downloaded zip is parsed as untrusted input. |
+| `eq_layer/dbdc3.py` | `dbd-challenge.github.io` | `eval/dbdc3_breakdown_eval.py` compares the archive to `DBDC3_ARCHIVE_SHA256` before parsing; `download_archive()` itself does not verify. |
+| `eq_layer/dialogbank_iso.py` | `dialogbank.lsv.uni-saarland.de` | None. Fetched pages and XML are parsed as untrusted input. |
+
+Running the evaluation harness therefore needs network access and trusts those
+hosts to serve the data the harness expects. The installed library used in a
+request path does not.
 
 ## Supported versions
 
@@ -29,8 +45,9 @@ model artifacts, and those are exactly the part you must trust.
 | `0.2.x` on PyPI | Yes | `0.2.5` is the current release, published with a PEP 740 attestation. |
 | `<= 0.1.x` | No | No fixes. Reproduce on `main` and open an issue if it still reproduces. |
 
-Only the current release is exercised by CI (`.github/workflows/eval.yml` and the
-release workflows). Earlier versions are not.
+Only the current release is exercised by CI (`.github/workflows/quality-100.yml`,
+`.github/workflows/eval.yml` and the release workflows), on Python 3.12. Earlier
+versions are not.
 
 ## Verifying an install
 
@@ -119,7 +136,10 @@ channel will be arranged.
   while violating a hard contract: question budget overruns, required
   clarification never issued, unsupported privacy promises ("I'll keep this
   just between us"), unknown-stance admissions presented as fact, repair
-  repetition, low-verbosity overruns.
+  repetition, low-verbosity overruns. Phrase matching is folded against
+  punctuation, fullwidth characters, zero-width characters, combining marks
+  and Turkish dotted/dotless case, so a spelling-level evasion is a finding,
+  not an exemption.
 - **Steering or policy selection that drops a boundary.** The `boundary`
   policy, or an explicit user constraint, being overridden by affect-driven
   adaptation when the factually requested task is unchanged.
@@ -143,8 +163,10 @@ channel will be arranged.
 - **Host model behaviour.** What the wrapped model does with the steering
   text, including prompt-injection resistance of the model itself, belongs to
   the host/s SDK.
-- **Dependency CVEs in unrelated tooling.** The library has no runtime
-  dependencies; `scikit-learn` is optional and only used by trained adapters.
+- **Dependency CVEs in unrelated tooling.** The core library has no required
+  runtime dependencies; `scikit-learn` and `joblib` are optional and only used
+  by trained adapters. Dataset downloads are explicit evaluation helpers, not
+  part of the request path.
 - **Dataset licensing.** Covered in `THIRD_PARTY_DATA.md`.
 
 ## Loading artifacts safely

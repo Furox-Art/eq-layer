@@ -17,9 +17,11 @@ duplicated code without silently changing any matcher's semantics.
 from __future__ import annotations
 
 import re
+import unicodedata
 
 _PUNCTUATION = re.compile(r"[^\w\s]")
 _COMBINING_DOT_ABOVE = "\u0307"
+_ZERO_WIDTH = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff\u180e"), " ")
 
 
 def normalise_light(text: str) -> str:
@@ -40,3 +42,20 @@ def normalise_plain(text: str, *, drop_combining_dot_above: bool = False) -> str
     if drop_combining_dot_above:
         lowered = lowered.replace(_COMBINING_DOT_ABOVE, "")
     return " ".join(_PUNCTUATION.sub(" ", lowered).split())
+
+
+def normalise_match(text: str) -> str:
+    """Fold text for phrase matching, erasing spelling-level evasions.
+
+    Unlike :func:`normalise_plain`, this also applies NFKD compatibility
+    folding, casefolding, combining-mark removal and Turkish dotless-i
+    folding (``ı`` to ``i``). It is deliberately aggressive: it is only used
+    to decide whether a response contains a known contract-violating phrase,
+    so ``KİMSEYE-SÖYLEMEM``, ``ｋｉｍｓｅｙｅ söylemem``, ``sen haklisin`` and
+    ``you’re right`` must all match their canonical spellings. Punctuation
+    becomes spaces so the caller can enforce word boundaries on the result.
+    """
+    folded = unicodedata.normalize("NFKD", text.casefold())
+    folded = "".join(ch for ch in folded if not unicodedata.combining(ch))
+    folded = folded.replace("ı", "i").translate(_ZERO_WIDTH)
+    return " ".join(_PUNCTUATION.sub(" ", folded).split())
