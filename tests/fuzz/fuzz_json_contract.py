@@ -13,7 +13,7 @@ from eq_layer.json_contract import loads
 
 
 def TestOneInput(data: bytes) -> None:
-    fdp = atheris.FuzzDataProvider(data)
+    fdp = atheris.FuzzedDataProvider(data)
     text = fdp.ConsumeUnicodeNoSurrogates(4096)
     try:
         loads(text)
