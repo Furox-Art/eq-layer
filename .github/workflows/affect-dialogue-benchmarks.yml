@@ -19,6 +19,9 @@ concurrency:
   group: eq-layer-affect-dialogue-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   benchmark:
     runs-on: ubuntu-latest

@@ -15,6 +15,9 @@ concurrency:
   group: eq-layer-disagreement-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   audit:
     runs-on: ubuntu-latest

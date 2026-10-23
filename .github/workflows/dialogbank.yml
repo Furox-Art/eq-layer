@@ -9,6 +9,9 @@ on:
       - ".github/workflows/dialogbank.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   inventory:
     runs-on: ubuntu-latest

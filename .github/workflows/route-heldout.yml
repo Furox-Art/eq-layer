@@ -17,6 +17,9 @@ concurrency:
   group: eq-layer-route-heldout-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   route-heldout:
     runs-on: ubuntu-latest

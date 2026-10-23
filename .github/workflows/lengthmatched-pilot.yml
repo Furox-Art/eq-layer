@@ -14,6 +14,9 @@ concurrency:
   group: eq-layer-lengthmatched-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   pilot:
     runs-on: ubuntu-latest
