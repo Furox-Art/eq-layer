@@ -1,0 +1,22 @@
+site_name: EQ-Layer
+site_description: >-
+  Inspectable intent, affect, repair, uncertainty, and factored-action control
+  for LLM responses.
+site_author: Furox-Art
+repo_url: https://github.com/Furox-Art/eq-layer
+repo_name: Furox-Art/eq-layer
+copyright: MIT licensed.
+
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
