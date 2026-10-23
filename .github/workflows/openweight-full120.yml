@@ -81,7 +81,7 @@ jobs:
             --seed 4242
 
       - name: Upload unblinded full-run provenance
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: eq-layer-qwen-full120-provenance
           path: |
@@ -92,14 +92,14 @@ jobs:
           if-no-files-found: error
 
       - name: Upload blinded full-run ballot
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: eq-layer-qwen-full120-ballot
           path: artifacts/qwen_full120_ballot.jsonl
           if-no-files-found: error
 
       - name: Upload decode key separately
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: eq-layer-qwen-full120-key
           path: artifacts/qwen_full120_key.json
