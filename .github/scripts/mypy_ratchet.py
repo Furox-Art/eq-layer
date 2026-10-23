@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Strict mypy ratchet for eq-layer.
 
 Runs ``mypy --strict`` over ``eq_layer`` and compares the per-file error count
