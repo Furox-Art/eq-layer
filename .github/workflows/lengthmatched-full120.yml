@@ -20,6 +20,9 @@ concurrency:
   group: eq-layer-lm-full120-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   full120:
     runs-on: ubuntu-latest

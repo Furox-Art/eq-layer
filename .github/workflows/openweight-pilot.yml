@@ -27,6 +27,9 @@ concurrency:
   group: eq-layer-openweight-pilot-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   pilot:
     runs-on: ubuntu-latest
