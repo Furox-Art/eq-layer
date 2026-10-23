@@ -11,9 +11,16 @@ process, and reports how much text matched. Within-process repetition isolates
 leaked state between requests; across-process comparison isolates kernel-level
 variance.
 
+With ``--require-reproducible`` a within-process mismatch fails the run with
+exit code 3: a persistent backend that answers the same request differently
+inside one process has leaked state, and the paired design is invalid. The
+across-process result is always reported but never gated, because CPU kernel
+variance is a property of the machine rather than a harness bug.
+
 Usage:
   python eval/reproducibility_check.py \
-    --model-command "python eval/hf_model_server.py --model-id Qwen/Qwen2.5-0.5B-Instruct"
+    --model-command "python eval/hf_model_server.py --model-id Qwen/Qwen2.5-0.5B-Instruct" \
+    --require-reproducible
 """
 
 from __future__ import annotations
@@ -23,6 +30,7 @@ import json
 import os
 import shlex
 import subprocess
+import sys
 
 PAYLOAD = {
     "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
@@ -82,6 +90,14 @@ def main() -> int:
     parser.add_argument("--model-command", required=True)
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--output")
+    parser.add_argument(
+        "--require-reproducible",
+        action="store_true",
+        help=(
+            "Exit 3 when the same payload does not produce identical text inside "
+            "one server process. Across-process variance is reported but not gated."
+        ),
+    )
     args = parser.parse_args()
 
     command = shlex.split(args.model_command)
@@ -109,6 +125,10 @@ def main() -> int:
             "reproducible": across_same == 2,
         },
         "within_matches_across": cross_match,
+        "gate": {
+            "require_reproducible": args.require_reproducible,
+            "within_process_passed": within_same == args.repeats,
+        },
         "texts": {"within": within, "across": across},
         "interpretation": (
             "within_process=false means request state leaks between calls in the "
@@ -128,6 +148,14 @@ def main() -> int:
         with open(args.output, "w", encoding="utf-8") as handle:
             handle.write(text + "\n")
     print(text)
+    if args.require_reproducible and within_same != args.repeats:
+        print(
+            "error: within-process generation is not reproducible "
+            f"({within_same}/{args.repeats} identical); request state leaks "
+            "between calls in the persistent backend.",
+            file=sys.stderr,
+        )
+        return 3
     return 0
 
 

@@ -78,7 +78,8 @@ jobs:
         run: |
           python eval/reproducibility_check.py \
             --model-command "python eval/hf_model_server.py --model-id Qwen/Qwen2.5-0.5B-Instruct --max-new-tokens 80 --cpu-threads 1" \
-            --output eval/results/qwen_reproducibility.json
+            --output eval/results/qwen_reproducibility.json \
+            --require-reproducible
 
       - name: Calibrate length control profile
         run: |

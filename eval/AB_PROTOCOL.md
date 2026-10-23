@@ -148,10 +148,13 @@ commit produced identical text for only 8 of 12 EQ arms and 7 of 12 baseline
 arms.
 
 `eval/hf_model_server.py` therefore enables deterministic algorithms and
-single-threaded execution by default. `eval/reproducibility_check.py` measures
-it rather than asserting it, sending the same payload repeatedly inside one
-process and again in a fresh one. A pilot that skips this check cannot claim a
-paired design.
+single-threaded execution by default. `eval/reproducibility_check.py` sends the
+same payload repeatedly inside one process and again in a fresh one. The pilot
+and full-120 workflows run it with `--require-reproducible`, so a state leak
+inside the persistent backend fails the job; the across-process result is
+recorded in the artifact but is not gated, because kernel-level variance is a
+property of the machine. A pilot that skips this check cannot claim a paired
+design.
 
 ## Sample-size target
 
