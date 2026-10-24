@@ -6,6 +6,7 @@ non-UTF-8 text by raising ValueError, never by crashing.
 """
 
 import sys
+from contextlib import suppress
 
 import atheris
 
@@ -15,10 +16,8 @@ from eq_layer.json_contract import loads
 def TestOneInput(data: bytes) -> None:
     fdp = atheris.FuzzedDataProvider(data)
     text = fdp.ConsumeUnicodeNoSurrogates(4096)
-    try:
+    with suppress(ValueError):
         loads(text)
-    except ValueError:
-        pass
 
 
 atheris.Setup(sys.argv, TestOneInput)
