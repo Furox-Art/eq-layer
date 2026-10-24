@@ -78,6 +78,13 @@ jobs:
             artifacts/heldout_control_records.jsonl \
             --output artifacts/heldout_control_intent_risk_sensitivity.json
 
+      - name: Check generation reproducibility
+        run: |
+          python eval/reproducibility_check.py \
+            --model-command "python eval/hf_model_server.py --model-id Qwen/Qwen2.5-0.5B-Instruct --max-new-tokens 80 --cpu-threads 2" \
+            --output eval/results/qwen_reproducibility.json \
+            --require-reproducible
+
       - name: Generate same-model baseline vs EQ pilot
         run: |
           python eval/ab_generate.py \
@@ -120,6 +127,7 @@ jobs:
             artifacts/qwen_pilot_intent_risk_sensitivity.json
             artifacts/heldout_control_records.jsonl
             artifacts/heldout_control_intent_risk_sensitivity.json
+            eval/results/qwen_reproducibility.json
           if-no-files-found: error
 
       - name: Upload blinded ballot
