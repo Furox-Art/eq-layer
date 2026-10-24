@@ -53,6 +53,13 @@ jobs:
           python tools/train_xdailydialog_subtext.py \
             --output artifacts/xdailydialog_subtext.joblib
 
+      - name: Check generation reproducibility
+        run: |
+          python eval/reproducibility_check.py \
+            --model-command "python eval/hf_model_server.py --model-id Qwen/Qwen2.5-0.5B-Instruct --max-new-tokens 80 --cpu-threads 2" \
+            --output eval/results/qwen_reproducibility.json \
+            --require-reproducible
+
       - name: Generate final-mode same-model baseline vs EQ pairs
         run: |
           python eval/ab_generate.py \
@@ -92,6 +99,7 @@ jobs:
             artifacts/qwen_full120_pairs.jsonl
             artifacts/qwen_full120_generation_manifest.json
             artifacts/qwen_full120_intent_risk_sensitivity.json
+            eval/results/qwen_reproducibility.json
           if-no-files-found: error
 
       - name: Upload blinded full-run ballot
