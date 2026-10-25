@@ -27,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   changelog and citation metadata, so the packaged source matches the claims
   the project makes about its own evaluation.
 
+### Fixed
+
+- `eval/determinism_workload.py` pins stdout to UTF-8, so a direct run on a
+  legacy console code page no longer fails with `UnicodeEncodeError` on the
+  combining marks that text normalisation emits. The emitted bytes now match
+  the variants the matrix already recorded under `PYTHONIOENCODING=utf-8`.
+
 ### CI
 
 - Weekly Dependabot updates for GitHub Actions and pip, OpenSSF Scorecard

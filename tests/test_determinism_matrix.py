@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -372,3 +373,18 @@ def test_compare_rejects_failed_runs(tmp_path: Path) -> None:
     report = json.loads(compared.stdout)
     assert report["comparable"] is False
     assert any("exited 1" in error for error in report["errors"])
+
+
+def test_workload_emits_utf8_on_a_legacy_console_code_page() -> None:
+    completed = subprocess.run(
+        [sys.executable, str(WORKLOAD)],
+        capture_output=True,
+        env={**os.environ, "PYTHONIOENCODING": "cp1254"},
+        timeout=120,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr.decode("utf-8", "replace")
+    text = completed.stdout.decode("utf-8")
+    payload = json.loads(text)
+    assert "\u0307" in text
+    assert payload["normalised"]

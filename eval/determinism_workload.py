@@ -11,6 +11,10 @@ from typing import Any
 
 
 def main() -> None:
+    # The payload contains combining marks that a legacy console code page
+    # cannot encode; pin stdout so standalone runs emit the same UTF-8 bytes as
+    # the matrix, which already sets PYTHONIOENCODING=utf-8 for its variants.
+    sys.stdout.reconfigure(encoding="utf-8")
     repo_root = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(repo_root))
 
