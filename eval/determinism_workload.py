@@ -27,6 +27,7 @@ def main() -> None:
         fuse_dialogue_evidence,
     )
     from eq_layer.policies import Selector
+    from eq_layer.response_experiment import select_stratified_cases
     from eq_layer.textnorm import normalise_light, normalise_match, normalise_plain
 
     messages = [
@@ -60,6 +61,16 @@ def main() -> None:
             no_guess=True,
         ),
     )
+    # The pilot selector is documented as deterministic: strata are read in
+    # sorted order and the round-robin interleave is what keeps a prefix from
+    # becoming single-domain. Source order is deliberately not sorted, so a
+    # regression to set iteration changes the selection with the hash seed.
+    pilot_cases = [
+        {"id": f"{stratum}-{index}", "source": {"stratum": stratum}}
+        for stratum, count in (("gamma", 4), ("alpha", 1), ("beta", 3))
+        for index in range(count)
+    ]
+    pilot = select_stratified_cases(pilot_cases, limit=6)
     payload: dict[str, Any] = {
         "affect": asdict(state),
         "belief": fused.as_dict(),
@@ -83,9 +94,12 @@ def main() -> None:
             normalise_plain("Neden yine?"),
             normalise_match("Neden yine?"),
         ],
+        "pilot": [case["id"] for case in pilot],
     }
     if not audit.passed or selection.policy.name == "":
         raise SystemExit("workload produced an unexpected control decision; it is vacuous")
+    if len(pilot) != 6 or len({case["id"].split("-", 1)[0] for case in pilot}) != 3:
+        raise SystemExit("pilot selection is empty or incomplete; it is vacuous")
     artifact_dir = os.environ.get("DETERMINISM_ARTIFACT_DIR")
     if artifact_dir:
         Path(artifact_dir, "payload.json").write_text(
