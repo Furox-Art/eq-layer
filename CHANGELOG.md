@@ -39,6 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Weekly Dependabot updates for GitHub Actions and pip, OpenSSF Scorecard
   publishing, and dependency review that fails pull requests introducing a
   high-severity advisory.
+- The determinism workload samples `select_stratified_cases` with a mixed
+  three-stratum fixture, so the documented pilot order is now covered by the
+  seed and cross-OS gates. A regression to set iteration changes the
+  selection with `PYTHONHASHSEED` and fails the matrix instead of passing
+  unnoticed.
 
 ## [0.2.5] - 2026-10-21
 
