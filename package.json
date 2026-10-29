@@ -29,10 +29,10 @@
     "cursor",
     "grok",
     "dialogue-management",
-    "dialogue-policy",
     "affective-computing",
     "intent-classification",
-    "llm-steering"
+    "llm-steering",
+    "response-quality"
   ],
   "repository": {
     "type": "git",
