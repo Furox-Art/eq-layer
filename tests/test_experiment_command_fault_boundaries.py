@@ -155,3 +155,49 @@ def test_close_on_terminated_and_timeout_child():
     model._process = child
     model.close()
     child.terminate.assert_called_once()
+
+
+def test_persistent_timeout_restarts_the_command_once(monkeypatch: pytest.MonkeyPatch):
+    model = _model()
+    model.persistent = True
+    first = SimpleNamespace(stdin=Mock(), stdout=Mock(), stderr=None, poll=lambda: None)
+    second = SimpleNamespace(stdin=Mock(), stdout=Mock(), stderr=None, poll=lambda: None)
+    model._process = first
+    monkeypatch.setattr(model, "_start_persistent_process", lambda: second)
+
+    results = iter(
+        [experiment.ModelCommandTimeout("stalled"), '{"text":"recovered"}']
+    )
+
+    def fake_read(process, timeout):
+        value = next(results)
+        if isinstance(value, experiment.ModelCommandTimeout):
+            raise value
+        return value
+
+    monkeypatch.setattr(model, "_read_line", fake_read)
+    assert model._persistent_generate({"messages": []}) == '{"text":"recovered"}'
+    assert model._process is second
+    first.stdin.write.assert_called_once()
+    second.stdin.write.assert_called_once()
+
+
+def test_persistent_timeout_after_the_restart_is_still_an_error(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    model = _model()
+    model.persistent = True
+    first = SimpleNamespace(stdin=Mock(), stdout=Mock(), stderr=None, poll=lambda: None)
+    second = SimpleNamespace(stdin=Mock(), stdout=Mock(), stderr=None, poll=lambda: None)
+    model._process = first
+    monkeypatch.setattr(model, "_start_persistent_process", lambda: second)
+
+    def always_timeout(process, timeout):
+        raise experiment.ModelCommandTimeout("stalled")
+
+    monkeypatch.setattr(model, "_read_line", always_timeout)
+    with pytest.raises(experiment.ModelCommandTimeout, match="stalled"):
+        model._persistent_generate({"messages": []})
+    assert model._process is None
+    assert first.stdin.write.call_count == 1
+    assert second.stdin.write.call_count == 1

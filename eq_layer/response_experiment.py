@@ -294,36 +294,55 @@ class CommandModel:
 
         return self._decode_response(raw)
 
+    def _start_persistent_process(self) -> subprocess.Popen:
+        return subprocess.Popen(
+            list(self.command),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+
     def _persistent_generate(self, payload: dict) -> str:
-        if self._process is None:
-            self._process = subprocess.Popen(
-                list(self.command),
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
-            )
+        # One restart is permitted after a timeout. The model is sampled at
+        # temperature 0 with a fixed seed, so retrying the same payload cannot
+        # change the recorded output, and a single wedged read (2026-10-27:
+        # the full-120 run died after 41 minutes) must not discard the run.
+        last_timeout: ModelCommandTimeout | None = None
+        for _ in range(2):
+            if self._process is None:
+                self._process = self._start_persistent_process()
 
-        process = self._process
-        if process.stdin is None or process.stdout is None:
-            raise RuntimeError("Persistent model command pipes are unavailable.")
-        if process.poll() is not None:
-            stderr = process.stderr.read().strip() if process.stderr else ""
-            raise RuntimeError(
-                f"Persistent model command exited ({process.returncode}): {stderr}"
-            )
+            process = self._process
+            if process.stdin is None or process.stdout is None:
+                raise RuntimeError("Persistent model command pipes are unavailable.")
+            if process.poll() is not None:
+                stderr = process.stderr.read().strip() if process.stderr else ""
+                raise RuntimeError(
+                    f"Persistent model command exited ({process.returncode}): {stderr}"
+                )
 
-        process.stdin.write(json.dumps(payload, ensure_ascii=False) + "\n")
-        process.stdin.flush()
-        raw = self._read_line(process, self.timeout_seconds)
-        if not raw:
-            stderr = process.stderr.read().strip() if process.stderr else ""
-            raise RuntimeError(
-                "Persistent model command returned an empty response. "
-                f"stderr={stderr}"
-            )
-        return raw
+            process.stdin.write(json.dumps(payload, ensure_ascii=False) + "\n")
+            process.stdin.flush()
+            try:
+                raw = self._read_line(process, self.timeout_seconds)
+            except ModelCommandTimeout as exc:
+                # _read_line force-killed the child; drop it so the next
+                # attempt starts a fresh process.
+                self._process = None
+                last_timeout = exc
+                continue
+            if not raw:
+                stderr = process.stderr.read().strip() if process.stderr else ""
+                raise RuntimeError(
+                    "Persistent model command returned an empty response. "
+                    f"stderr={stderr}"
+                )
+            return raw
+
+        assert last_timeout is not None
+        raise last_timeout
 
     def _read_line(self, process: subprocess.Popen, timeout_seconds: float) -> str:
         """Read one stdout line from the child under a wall-clock deadline.

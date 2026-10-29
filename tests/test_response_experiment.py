@@ -65,12 +65,13 @@ def test_persistent_timeout_raises_typed_error_and_kills_child(
 
     # The deadline must fire near 1s, never after the child's 300s sleep.
     assert elapsed < 10
-    assert len(spawns) == 1
-    # The wedged child was force-killed and reaped, not left running.
-    assert spawns[0].poll() is not None
+    # One retry: the first wedged child is replaced so a single stall cannot
+    # discard a long run, and both are force-killed and reaped.
+    assert len(spawns) == 2
+    assert all(child.poll() is not None for child in spawns)
 
 
-def test_persistent_generate_after_timeout_reports_dead_child() -> None:
+def test_persistent_timeout_leaves_no_wedged_child_behind() -> None:
     model = CommandModel(
         command=SLEEPER_ARGV,
         model_id="sleeper",
@@ -80,7 +81,9 @@ def test_persistent_generate_after_timeout_reports_dead_child() -> None:
     try:
         with pytest.raises(ModelCommandTimeout):
             model.generate(MESSAGES, seed=0, condition="eq")
-        with pytest.raises(RuntimeError, match="exited"):
+        # The failed call dropped its wedged child; the next call starts a
+        # fresh process and times out on its own rather than reusing a corpse.
+        with pytest.raises(ModelCommandTimeout):
             model.generate(MESSAGES, seed=0, condition="eq")
     finally:
         model.close()
