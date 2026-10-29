@@ -294,7 +294,7 @@ class CommandModel:
 
         return self._decode_response(raw)
 
-    def _start_persistent_process(self) -> subprocess.Popen:
+    def _start_persistent_process(self) -> subprocess.Popen[str]:
         return subprocess.Popen(
             list(self.command),
             stdin=subprocess.PIPE,
