@@ -45,6 +45,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   selection with `PYTHONHASHSEED` and fails the matrix instead of passing
   unnoticed.
 
+## [0.2.6] - 2026-11-07
+
+### Changed
+
+- Python 3.10 support dropped: `requires-python` is now `>=3.11` and the 3.10
+  classifier is gone. No code change; the portfolio is consolidating on a
+  single support floor and 3.10 is out of upstream support.
+
 ## [0.2.5] - 2026-10-21
 
 ### Security
