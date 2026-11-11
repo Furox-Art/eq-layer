@@ -4,6 +4,13 @@ import re
 from dataclasses import dataclass
 from typing import Protocol
 
+from .i18n import (
+    ACTION_MARKERS,
+    CONSTRAINT_MARKERS,
+    EXPLANATION_MARKERS,
+    STATUS_MARKERS,
+    VAGUE_FORMS,
+)
 from .intent_belief import IntentBelief, IntentRiskDecision
 from .textnorm import normalise_light
 
@@ -29,58 +36,6 @@ class IntentAdapter(Protocol):
 
     def infer(self, messages: list[dict]) -> IntentState:
         pass  # pragma: no cover - Protocol stub
-
-
-ACTION_MARKERS = (
-    "yap",
-    "ekle",
-    "düzelt",
-    "kontrol et",
-    "bak",
-    "gönder",
-    "oluştur",
-    "sil",
-    "devam et",
-    "çalıştır",
-    "araştır",
-    "incele",
-)
-
-STATUS_MARKERS = (
-    "durum ne",
-    "son durum",
-    "ne kadar kaldı",
-    "bitti mi",
-    "oluyor mu",
-    "çalışıyor mu",
-)
-
-EXPLANATION_MARKERS = (
-    "neden",
-    "niçin",
-    "nasıl",
-    "anlat",
-    "açıkla",
-    "ne demek",
-)
-
-VAGUE_FORMS = (
-    "bu",
-    "bunu",
-    "şu",
-    "şunu",
-    "onu",
-    "şey",
-)
-
-CONSTRAINT_MARKERS = (
-    ("kısa", "brief"),
-    ("net", "direct"),
-    ("sadece", "scope_limited"),
-    ("detaylı", "detailed"),
-    ("tahmin etme", "no_guess"),
-    ("uydurma", "no_guess"),
-)
 
 
 @dataclass

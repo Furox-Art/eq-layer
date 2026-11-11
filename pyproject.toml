@@ -38,6 +38,10 @@ ml = [
   "joblib>=1.3,<2",
   "scikit-learn>=1.5,<2",
 ]
+transformers = [
+  "torch>=2.0",
+  "transformers>=4.30",
+]
 dev = [
   "build>=1.2,<2",
   "joblib>=1.3,<2",

@@ -25,12 +25,12 @@ _ZERO_WIDTH = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff\u180e"), " 
 
 
 def normalise_light(text: str) -> str:
-    """Lowercase and collapse whitespace. Punctuation is preserved."""
-    return " ".join(text.lower().split())
+    """Lowercase, fold Cyrillic ё to е, and collapse whitespace. Punctuation is preserved."""
+    return " ".join(text.lower().replace("ё", "е").split())
 
 
 def normalise_plain(text: str, *, drop_combining_dot_above: bool = False) -> str:
-    """Lowercase, replace punctuation with spaces, and collapse whitespace.
+    """Lowercase, fold Cyrillic ё to е, replace punctuation with spaces, and collapse whitespace.
 
     ``drop_combining_dot_above`` removes U+0307 before the punctuation pass so
     that ``i`` + combining dot above normalises like a bare ``i``. This is
@@ -38,7 +38,7 @@ def normalise_plain(text: str, *, drop_combining_dot_above: bool = False) -> str
     matcher; it is off by default so the default behaviour stays identical to
     the historical copies.
     """
-    lowered = text.lower()
+    lowered = text.lower().replace("ё", "е")
     if drop_combining_dot_above:
         lowered = lowered.replace(_COMBINING_DOT_ABOVE, "")
     return " ".join(_PUNCTUATION.sub(" ", lowered).split())

@@ -4,6 +4,13 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Protocol
 
+from .i18n import (
+    CORRECTION_MARKERS,
+    DISCLOSURE_MARKERS,
+    ESCALATION_MARKERS,
+    QUESTION_OPENERS,
+    SOFTENERS,
+)
 from .json_contract import loads as strict_json_loads
 from .policies import AffectState
 
@@ -21,66 +28,6 @@ class AffectAdapter(Protocol):
 
 
 # --- detectors -----------------------------------------------------------
-# Keyword sets are a stand-in for a trained classifier. They are deliberately
-# small and readable: when one of them is wrong you can see why without a
-# gradient.
-
-ESCALATION_MARKERS = (
-    "neden",
-    "sen de",
-    "saçmalama",
-    "yine",
-    "kaç kez",
-    "kaç defa",
-    "anlamıyorsun",
-    "sinir",
-    "rezalet",
-)
-
-SOFTENERS = (
-    "galiba",
-    "aslında",
-    "belki",
-    "biraz",
-    "emin değilim",
-    "kısmen",
-)
-
-CORRECTION_MARKERS = (
-    "hayır, onu demedim",
-    "hayır onu demedim",
-    "öyle değil",
-    "yanlış anladın",
-    "yanlış anladınız",
-    "onu sormadım",
-    "ben onu demedim",
-    "demek istediğim",
-    "kastettiğim",
-    "that's not what i meant",
-    "you misunderstood",
-    "no, i meant",
-    "i didn't say that",
-    "i said",
-    "i meant",
-    "meant to say",
-    "that doesn't work",
-    "that does not work",
-    "that doesn’t work",
-    "that's wrong",
-    "that is wrong",
-)
-
-DISCLOSURE_MARKERS = (
-    "kimseye anlatma",
-    "kimseye söyleme",
-    "sır",
-    "gizli tut",
-    "benden başka kimse",
-)
-
-# A user opening consecutive turns with a wh-word is asking the same thing
-# again. That is interrogation, not curiosity — and the register has to change.
-QUESTION_OPENERS = ("ne", "neden", "niçin", "nasıl", "nedir", "hangi", "kaç", "mı", "mi")
 
 
 @dataclass

@@ -3,6 +3,13 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from .i18n import (
+    ASSISTANT_OFFER_MARKERS as _ASSISTANT_OFFER_MARKERS,
+    CONTINUE_FORMS as _CONTINUE_FORMS,
+    EXECUTE_REFERENCE_FORMS as _EXECUTE_REFERENCE_FORMS,
+    REVISE_REFERENCE_FORMS as _REVISE_REFERENCE_FORMS,
+    USER_GOAL_MARKERS as _USER_GOAL_MARKERS,
+)
 from .textnorm import normalise_plain
 
 
@@ -38,73 +45,6 @@ class DialogueReferenceState:
     confidence: float = 0.0
     evidence_level: str = "structural"
     evidence: tuple[str, ...] = ()
-
-
-_CONTINUE_FORMS = {
-    "devam",
-    "devam et",
-    "continue",
-    "go on",
-    "keep going",
-}
-
-_EXECUTE_REFERENCE_FORMS = {
-    "yap",
-    "bunu yap",
-    "şunu yap",
-    "onu yap",
-    "do it",
-    "do this",
-    "do that",
-}
-
-_REVISE_REFERENCE_FORMS = {
-    "düzelt",
-    "bunu düzelt",
-    "şunu düzelt",
-    "onu düzelt",
-    "fix it",
-    "fix this",
-    "fix that",
-}
-
-_ASSISTANT_OFFER_MARKERS = (
-    "istersen",
-    "yapabilirim",
-    "yapayım",
-    "yapabiliriz",
-    "devam edebilirim",
-    "geçebilirim",
-    "would you like me to",
-    "shall i",
-)
-
-_USER_GOAL_MARKERS = (
-    "yap",
-    "ekle",
-    "düzelt",
-    "kontrol et",
-    "bak",
-    "gönder",
-    "oluştur",
-    "sil",
-    "çalıştır",
-    "araştır",
-    "incele",
-    "durum ne",
-    "son durum",
-    "neden",
-    "nasıl",
-    "anlat",
-    "açıkla",
-    "do",
-    "fix",
-    "check",
-    "run",
-    "explain",
-    "why",
-    "how",
-)
 
 
 def _normalise(text: str) -> str:

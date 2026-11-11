@@ -21,8 +21,10 @@ from .response_experiment import (
 from .steer import Steer, aggregate, score_case
 from .trained_affect import DimensionalAffect, TrainedAffect
 from .trained_intent import TrainedIntent
+from .transformer_intent import TransformerIntent
 from .trained_subtext import DialogueSignals, SubtextDecision, TrainedSubtext
 from .tracker import AnnotationStanceResolver, ConversationTracker, StanceDecision, TrackingResult
+from . import i18n
 
 # Snapshot re-export: code that must observe runtime overrides reads
 # eq_layer.policies.POLICIES instead.
@@ -64,6 +66,8 @@ __all__ = [
     "SessionPreferences",
     "Steer",
     "TrainedIntent",
+    "TransformerIntent",
+    "i18n",
     "TrainedAffect",
     "DimensionalAffect",
     "aggregate",
