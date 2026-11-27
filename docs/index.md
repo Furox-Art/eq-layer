@@ -4,8 +4,11 @@ EQ-Layer is an early-stage, model-agnostic control layer that gives a language
 model an explicit decision about how to respond before it responds. It tracks
 affect, intent belief, repair state, and interaction quality across turns,
 selects a response policy, and compiles that policy into factored controls that
-are injected into the decode path. The intermediate decisions stay inspectable
-rather than being folded into a prompt instruction.
+are rendered as structured prompt instructions (a system instruction plus a
+prompt prefix). Steering is prompt-level: the `Steer.logit_bias` field is an
+unused placeholder, and no token- or decode-time intervention is implemented.
+The intermediate decisions stay inspectable instead of being hidden inside an
+opaque generation step.
 
 The project does not retrain the model and does not claim that affect-aware
 dialogue policy, intent routing, or repair are new. Its narrower question is
@@ -18,7 +21,9 @@ the claims this project deliberately avoids.
 
 Early. The evaluation harness runs, but its numbers are development signals,
 not a real-world EQ benchmark. There is no standard benchmark for EQ; `eval/`
-is a first attempt at measuring one.
+is a first attempt at measuring one. The claim that the layer improves a fixed
+model's responses is untested: the pre-registered human A/B evaluation in
+`eval/AB_PROTOCOL.md` is pending, with no rated results.
 
 ## Documentation
 

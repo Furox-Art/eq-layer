@@ -45,6 +45,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   selection with `PYTHONHASHSEED` and fails the matrix instead of passing
   unnoticed.
 
+### Documentation
+
+- README and docs no longer claim decode-path steering. Steering is
+  prompt-level (`Steer.system_instruction()` / `Steer.apply_to_prompt()`);
+  the `Steer.logit_bias` field is documented as an unused placeholder, which
+  is what the code actually does.
+- The intent loss matrix is documented as explicitly **uncalibrated**
+  (`hand-specified-v1`), with calibration pending under
+  `eval/LOSS_MATRIX_CALIBRATION_PROTOCOL.md`. The clarification-cost
+  sensitivity table now reproduces the full sweep captured in
+  `eval/results/intent_risk_heldout_120_audit.json` (×0.75 through ×2.5) and
+  summarises the grouped-cost no-go artifact
+  `eval/results/intent_risk_grouped_120_sensitivity.json`. No new data was
+  produced; every number is read from the existing captured artifacts.
+- The response-level human A/B evaluation is marked **PENDING** in the README
+  and docs: 0 adjudicated routing labels, blinded ratings blank, no rated
+  result exists. The claim that EQ-Layer improves a fixed LLM's responses is
+  stated as an untested hypothesis pointing at the pre-registered
+  `eval/AB_PROTOCOL.md`.
+- New doc-guard tests pin these claims: prompt-level steering wording, the
+  unused `logit_bias` placeholder, the uncalibrated loss-matrix status, the
+  sensitivity table against the captured artifact, and the pending A/B status.
+
+## [0.2.6] - 2026-11-07
+
+### Changed
+
+- Python 3.10 support dropped: `requires-python` is now `>=3.11` and the 3.10
+  classifier is gone. No code change; the portfolio is consolidating on a
+  single support floor and 3.10 is out of upstream support.
+
 ## [0.2.5] - 2026-10-21
 
 ### Security
