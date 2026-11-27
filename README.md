@@ -1,6 +1,6 @@
 # eq-layer
 
-A control layer that gives an LLM a *decision* about how to speak before it speaks — instead of asking it to be more empathetic in a prompt.
+A control layer that gives an LLM an explicit, inspectable *decision* about how to speak before it speaks — compiled into structured prompt instructions, rather than a vague ask to be more empathetic.
 
 ## Why this exists
 
@@ -18,7 +18,7 @@ So this repo does not retrain the model. It adds a layer:
 3. **Conversation health state** — `repair` identifies observable user→assistant misalignment and its target; `interaction_quality` tracks structural conversation failure separately from emotion using current score, delta, repeated failures, unresolved repair, and clarification load.
 4. **Policy selection** — affect and intent jointly choose a response-policy family (`mirror`, `validate_redirect`, `direct`, `ask`, `deflate`, `repair`, `hold`, `boundary`). Selection is a discrete decision, not generation.
 5. **Factored action compilation** — the selected policy is split into orthogonal controls: `task_move`, `social_move`, `repair_move`, and `realization`. The task is driven primarily by user intent, so affective adaptation cannot silently replace what the user actually asked for.
-6. **Steering** — the factored action, source policy, repair state, interaction quality, and canonical request are injected into the decode path so the control decision actually lands in the tokens.
+6. **Steering (prompt-level)** — the factored action, source policy, repair state, interaction quality, and canonical request are compiled into a structured system instruction and prompt prefix (`Steer.system_instruction()` / `Steer.apply_to_prompt()`). This is prompt-level steering, not token-level intervention: the `Steer.logit_bias` field is an unused placeholder (never populated or applied), no logits or decoding are touched, and whether the control decision lands in the output depends on the model following the instruction.
 7. **Structural response audit** — the generated response is checked against inspectable control contracts such as question budget, required clarification, unsupported privacy promises, unknown-stance admissions, repair repetition, and low-verbosity overruns. This is not a factual truth checker.
 
 ## Prior art and novelty boundary
@@ -40,6 +40,8 @@ and architecture lessons carried forward into this project.
 ## Status
 
 Early. The harness runs; the numbers are development signals, not a real-world EQ benchmark.
+
+**The core claim is untested.** That this layer improves a fixed LLM's responses has not been established: no real-model A/B comparison has been generated and rated, and the pre-registered human evaluation in `eval/AB_PROTOCOL.md` is **pending** (0 adjudicated routing labels, blinded ballot ratings blank). Until that study runs, "EQ-Layer improves responses" is a hypothesis, not a finding.
 
 There is no standard benchmark for EQ. `eval/` is a first attempt at one, not a finished measurement. If you improve the scorer, that contribution matters as much as adding a policy.
 
@@ -188,8 +190,12 @@ generic question can still be answered because the semantic mismatch cost is
 small, while ambiguity between executing an action and merely responding to a
 statement can trigger clarification.
 
-The current loss matrix is **hand-specified and transparent, not learned or
-claimed optimal**. It encodes relative interaction costs. EQ-Layer therefore
+The current loss matrix (`hand-specified-v1`) is **hand-specified, transparent,
+and uncalibrated: not learned, not calibrated against human cost judgments, and
+not claimed optimal**. It encodes relative interaction costs. Calibration is
+**pending** under the pre-registered `eval/LOSS_MATRIX_CALIBRATION_PROTOCOL.md`
+(a scaffold only — no calibrated matrix exists yet, and the A/B held-out set is
+forbidden tuning data). EQ-Layer therefore
 audits routing sensitivity rather than treating one matrix as ground truth:
 `eval/intent_risk_sensitivity.py` sweeps clarification cost and performs
 one-at-a-time ±20% perturbations of every non-zero loss cell, reporting action
@@ -207,12 +213,31 @@ of every non-zero loss cell, 7,332 / 7,440 routing decisions were unchanged
 (**98.55% local decision stability**).
 
 That result does **not** validate the loss matrix. Scaling the entire
-clarification-cost row changes routing substantially:
+clarification-cost row changes routing substantially. The full sweep below is
+read from the captured audit artifact
+`eval/results/intent_risk_heldout_120_audit.json` (120 frozen external held-out
+cases; no new runs were produced for this table):
 
-- production clarification rate: **45.0%**
-- clarification cost ×0.75: **69.17%**
-- clarification cost ×1.25: **19.17%**
-- clarification cost ×1.50: **9.17%**
+| clarification cost scale | clarification rate | flips vs production |
+| --- | ---: | ---: |
+| ×0.75 | 69.17% | 29 |
+| ×1.0 | 45.00% | 0 |
+| ×1.25 | 19.17% | 31 |
+| ×1.5 | 9.17% | 43 |
+| ×1.75 | 4.17% | 49 |
+| ×2.0 | 2.50% | 51 |
+| ×2.5 | 0.83% | 53 |
+
+Production (×1.0) clarifies on 54 / 120 cases (**45.0%**). A grouped-cost
+variant of the same audit
+(`eval/results/intent_risk_grouped_120_sensitivity.json`, status
+`no-go-for-loss-matrix-calibration-claim`) scales whole semantic cost groups at
+once: grouped ±20% clarification-cost scaling flips 18.33%–22.50% of routes,
+action/statement mismatch scaling flips 5.83%–6.67%, and status/question
+mismatch scaling flips 0%–0.83%. That does not contradict the 98.55%
+one-cell-at-a-time stability — coherent multi-cell perturbations are a stronger
+failure mode — and it is a NO-GO for any claim that the matrix is calibrated,
+optimal, or robust as a whole.
 
 The `task_repair` stratum is especially uncertain: 26 / 30 cases route to
 clarification (**86.67%**) with mean fused intent entropy 0.8954. This may
@@ -344,6 +369,17 @@ Component metrics do not establish that EQ-Layer improves the final response.
 The repository therefore includes a condition-blind paired human-evaluation
 harness. The complete pre-registered protocol is in `eval/AB_PROTOCOL.md`.
 
+**Status: PENDING — this evaluation has not been run.** No real-model paired
+responses have been rated by humans, and the repository contains no A/B result.
+The protocol's own current-state table (`eval/AB_PROTOCOL.md`, "Current state")
+records 120 frozen held-out cases, **0** adjudicated routing labels, a 120-row
+blinded ballot with ratings blank, and an 11.2% length residual versus the
+calibrated control (outside tolerance). Running it requires a real LLM backend
+for generation and independent human raters; neither is bundled or automated
+here, and the harness deliberately refuses to manufacture a result. Any claim
+that EQ-Layer improves response quality therefore remains unproven until this
+pre-registered comparison is completed.
+
 Generate paired responses with the **same base model** in both arms:
 
 ```bash
@@ -473,7 +509,7 @@ eq_layer/
   intent_belief.py    posterior belief + transparent Bayes-risk router
   trained_intent.py   learned TF-IDF + logistic-regression posterior adapter
   data/intent_train.jsonl  bundled training corpus
-  steer.py               policy + intent → decode path, and the scorer
+  steer.py               policy + intent → prompt-level steering text, and the scorer
   response_experiment.py same-model baseline-vs-EQ generation engine
 eval/
   cases.jsonl          development cases, not final A/B evidence
@@ -586,9 +622,9 @@ Part of the Furox scientific-computing portfolio: independently versioned projec
 - [axiomize-quantum-skills-2.0](https://github.com/Furox-Art/axiomize-quantum-skills-2.0) — modeling engine plus quantum-inspired reasoning bundle.
 - [quantum-reasoning-skill](https://github.com/Furox-Art/quantum-reasoning-skill) — agent skill that keeps competing hypotheses alive.
 - [plan-auditor](https://github.com/Furox-Art/plan-auditor) — evidence-based completion gate for coding agents.
-- [nomosguard](https://github.com/Furox-Art/nomosguard) — deterministic security decision layer with a hash-chained ledger.
+- [nomosguard](https://github.com/Furox-Art/evidence-ledger-policy-gate) — deterministic security decision layer with a hash-chained ledger.
 - [literature-evidence-mcp](https://github.com/Furox-Art/literature-evidence-mcp) — literature MCP server with a hash-chained evidence ledger.
-- [repocraft](https://github.com/Furox-Art/repocraft) — byte-deterministic project scaffolding.
+- [repocraft](https://github.com/Furox-Art/deterministic-recipe-scaffolder) — byte-deterministic project scaffolding.
 
 ## License
 

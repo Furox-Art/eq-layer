@@ -318,3 +318,69 @@ def test_the_architecture_control_path_matches_the_route_output() -> None:
         "factored_action",
         "system_instruction",
     }
+
+
+# --- claim honesty: steering level, calibration, A/B status ----------------
+
+
+def test_readme_steering_claim_is_prompt_level_not_decode_path() -> None:
+    line = _line_containing(README, "**Steering")
+    lowered = line.lower()
+    assert "prompt" in lowered
+    assert "logit_bias" in line
+    assert "decode path" not in lowered
+    index = (REPO_ROOT / "docs" / "index.md").read_text(encoding="utf-8")
+    for document in (README, index):
+        assert "decode path" not in document.lower()
+
+
+def test_steer_logit_bias_is_an_unused_placeholder() -> None:
+    from eq_layer.steer import Steer
+
+    steer = Steer.build(policies.POLICIES[0])
+    assert steer.logit_bias == {}
+    assert steer.apply_to_prompt("devam et").endswith("User: devam et")
+    source = (REPO_ROOT / "eq_layer" / "steer.py").read_text(encoding="utf-8")
+    # The field declaration is the only mention: nothing populates or applies it.
+    assert source.count("logit_bias") == 1
+
+
+def test_readme_loss_matrix_is_documented_as_uncalibrated() -> None:
+    sentence = _sentence_containing(README, "current loss matrix")
+    assert "hand-specified" in sentence
+    assert "uncalibrated" in sentence
+    assert "LOSS_MATRIX_CALIBRATION_PROTOCOL.md" in README
+    protocol = (
+        REPO_ROOT / "eval" / "LOSS_MATRIX_CALIBRATION_PROTOCOL.md"
+    ).read_text(encoding="utf-8")
+    assert "no calibrated matrix exists yet" in protocol
+
+
+def test_readme_clarification_sensitivity_table_matches_the_artifact() -> None:
+    audit = json.loads(
+        (REPO_ROOT / "eval" / "results" / "intent_risk_heldout_120_audit.json")
+        .read_text(encoding="utf-8")
+    )
+    section = _section(README, "Intent is a control signal, not mind-reading")
+    rows = {}
+    for line in section.splitlines():
+        if line.startswith("| ×"):
+            cells = [cell.strip() for cell in line.strip("|").split("|")]
+            rows[cells[0].lstrip("×")] = (cells[1], cells[2])
+    expected = audit["clarification_cost_sensitivity"]
+    assert set(rows) == set(expected)
+    for factor, item in expected.items():
+        rate, flips = rows[factor]
+        assert rate == f"{item['clarification_rate'] * 100:.2f}%"
+        assert flips == str(item["flips_vs_production"])
+
+
+def test_readme_response_level_ab_evaluation_is_marked_pending() -> None:
+    section = _section(README, "Blind response-level evaluation")
+    assert "PENDING" in section
+    assert "AB_PROTOCOL.md" in section
+    status = _section(README, "Status")
+    assert "untested" in status
+    assert "AB_PROTOCOL.md" in status
+    protocol = (REPO_ROOT / "eval" / "AB_PROTOCOL.md").read_text(encoding="utf-8")
+    assert "No claim about EQ-Layer improving anything has been established" in protocol
