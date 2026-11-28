@@ -12,27 +12,10 @@ from dataclasses import dataclass, field
 
 from .actions import FactoredAction, compose_action
 from .dialogue_reference import DialogueReferenceState
+from .i18n import GENERIC_PHRASES
 from .intent import IntentState
 from .interaction import InteractionQualityState, RepairState
 from .policies import Policy, Register
-
-# Cheap under human raters. A model that is not penalised for these will
-# produce them, because they are the highest-scoring way to sound caring while
-# saying nothing.
-GENERIC_PHRASES = (
-    "i understand how you feel",
-    "that sounds really tough",
-    "that must be frustrating",
-    "i'm sorry for your frustration",
-    "that sounds incredibly difficult",
-    "your feelings are valid",
-    "i hear you",
-    "that's completely understandable",
-    "anlıyorum",
-    "haklısın, çok zor",
-    "bunu anlıyorum",
-)
-
 
 @dataclass
 class Steer:

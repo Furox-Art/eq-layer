@@ -297,3 +297,65 @@
 {"text":"This thing","label":"unknown"}
 {"text":"That thing there","label":"unknown"}
 {"text":"The other one there","label":"unknown"}
+{"text":"Добавь это в репозиторий","label":"action_request"}
+{"text":"Обнови этот файл","label":"action_request"}
+{"text":"Исправь эту ошибку","label":"action_request"}
+{"text":"Запусти тесты для кода","label":"action_request"}
+{"text":"Сократи этот текст","label":"action_request"}
+{"text":"Отправь изменения на GitHub","label":"action_request"}
+{"text":"Удали эту секцию","label":"action_request"}
+{"text":"Создай отчет","label":"action_request"}
+{"text":"Проверь этот документ","label":"action_request"}
+{"text":"Сделай коммит","label":"action_request"}
+{"text":"Перепиши эту функцию","label":"action_request"}
+{"text":"Почини падение сервера","label":"action_request"}
+{"text":"Какой сейчас статус","label":"status_check"}
+{"text":"Что по статусу сборки","label":"status_check"}
+{"text":"Сколько еще осталось","label":"status_check"}
+{"text":"Тесты уже прошли?","label":"status_check"}
+{"text":"Сервер уже запустился?","label":"status_check"}
+{"text":"Это уже работает?","label":"status_check"}
+{"text":"Какое текущее состояние задачи","label":"status_check"}
+{"text":"Что там с деплоем","label":"status_check"}
+{"text":"Пайплайн завершился?","label":"status_check"}
+{"text":"Процесс еще идет?","label":"status_check"}
+{"text":"Почему это происходит","label":"explanation"}
+{"text":"Как это работает","label":"explanation"}
+{"text":"Объясни эту ошибку","label":"explanation"}
+{"text":"В чем причина падения","label":"explanation"}
+{"text":"Расскажи подробнее про этот метод","label":"explanation"}
+{"text":"Что значит этот код состояния","label":"explanation"}
+{"text":"Зачем здесь используется декоратор","label":"explanation"}
+{"text":"Поясни логику этого алгоритма","label":"explanation"}
+{"text":"Почему тесты падают с таймаутом","label":"explanation"}
+{"text":"Как устроена эта архитектура","label":"explanation"}
+{"text":"Поддерживается ли Python 3.12?","label":"question"}
+{"text":"Какой размер у этого файла?","label":"question"}
+{"text":"Какая версия библиотек установлена?","label":"question"}
+{"text":"Где находится конфигурационный файл?","label":"question"}
+{"text":"Кто автор этого коммита?","label":"question"}
+{"text":"Сколько памяти потребляет этот процесс?","label":"question"}
+{"text":"Какие параметры принимает эта функция?","label":"question"}
+{"text":"Куда сохраняются логи работы?","label":"question"}
+{"text":"Можно ли запустить это в докере?","label":"question"}
+{"text":"Какой порт открыт по умолчанию?","label":"question"}
+{"text":"Мою встречу перенесли три раза","label":"statement"}
+{"text":"Сегодня я очень устал","label":"statement"}
+{"text":"Этот результат отличается от ожидаемого","label":"statement"}
+{"text":"Вчера сервис работал без сбоев","label":"statement"}
+{"text":"Мне кажется, эта библиотека слишком медленная","label":"statement"}
+{"text":"Мы закончили первую часть проекта","label":"statement"}
+{"text":"Клиент оставил положительный отзыв","label":"statement"}
+{"text":"На улице идет сильный дождь","label":"statement"}
+{"text":"Пользователи жалуются на долгую загрузку","label":"statement"}
+{"text":"База данных выросла до десяти гигабайт","label":"statement"}
+{"text":"Это","label":"unknown"}
+{"text":"То","label":"unknown"}
+{"text":"Эту штуку","label":"unknown"}
+{"text":"Ту вещь","label":"unknown"}
+{"text":"Вот это","label":"unknown"}
+{"text":"Вон то","label":"unknown"}
+{"text":"Этого","label":"unknown"}
+{"text":"Штука","label":"unknown"}
+{"text":"Вещь","label":"unknown"}
+{"text":"Ерунда","label":"unknown"}

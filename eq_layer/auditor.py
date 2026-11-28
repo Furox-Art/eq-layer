@@ -4,31 +4,9 @@ import re
 from dataclasses import asdict, dataclass
 from difflib import SequenceMatcher
 
+from .i18n import ABSOLUTE_PRIVACY_PROMISES, STANCE_ADMISSIONS
 from .textnorm import normalise_light as _normalise
 from .textnorm import normalise_match
-
-ABSOLUTE_PRIVACY_PROMISES = (
-    "kimseye söylemem",
-    "sadece bu sohbette kalır",
-    "aramızda kalacak",
-    "tamamen gizli kalacak",
-    "i guarantee confidentiality",
-    "this will stay between us",
-    "no one else will know",
-    "completely confidential",
-)
-
-STANCE_ADMISSIONS = (
-    "haklısın",
-    "sen haklısın",
-    "ben yanıldım",
-    "ben yanlış anladım",
-    "ben hatalıydım",
-    "you're right",
-    "you are right",
-    "i was wrong",
-    "my mistake",
-)
 
 _PRIVACY_MATCH = tuple(normalise_match(phrase) for phrase in ABSOLUTE_PRIVACY_PROMISES)
 _STANCE_MATCH = tuple(normalise_match(phrase) for phrase in STANCE_ADMISSIONS)
